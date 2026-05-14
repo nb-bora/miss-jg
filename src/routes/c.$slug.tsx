@@ -115,23 +115,15 @@ function CandidatePage() {
               </div>
             )}
 
-            {/* Stats — violet panel like reference */}
-            <div className="mt-7 grid grid-cols-2 gap-3 rounded-2xl border border-violet/30 bg-gradient-to-br from-violet/15 to-magenta/10 p-1">
-              <div className="rounded-xl p-4">
-                <p className="font-display text-2xl font-extrabold text-gold sm:text-3xl">
-                  {formatXAF(c.total_collected)}
-                </p>
-                <p className="mt-1 text-[11px] uppercase tracking-wider text-white/65">
-                  Montant collecté
-                </p>
-              </div>
-              <div className="rounded-xl border-l border-violet/30 p-4">
-                <p className="font-display text-2xl font-extrabold sm:text-3xl">
-                  <Heart className="mr-1.5 inline h-5 w-5 text-magenta" />
-                  {formatNumber(c.total_votes)}
-                </p>
-                <p className="mt-1 text-[11px] uppercase tracking-wider text-white/65">Votes</p>
-              </div>
+            {/* Stats — votes seul */}
+            <div className="mt-7 rounded-2xl border border-violet/30 bg-gradient-to-br from-violet/15 to-magenta/10 p-5">
+              <p className="font-display text-3xl font-extrabold sm:text-4xl">
+                <Heart className="mr-2 inline h-6 w-6 text-magenta" />
+                {formatNumber(c.total_votes)}
+              </p>
+              <p className="mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">
+                Votes reçus
+              </p>
             </div>
 
             {c.bio && (

@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Crown } from "lucide-react";
-import { formatXAF, formatNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 
 interface Item {
   id: string;

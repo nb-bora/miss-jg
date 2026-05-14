@@ -160,26 +160,7 @@ function HomePage() {
         </div>
       </section>
 
-      {/* TRUST */}
-      <section id="trust" className="border-t border-border/40 bg-card/30 py-16">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:grid-cols-3 sm:px-6">
-          <Trust
-            icon={<ShieldCheck className="h-5 w-5 text-gold" />}
-            title="100% sécurisé"
-            text="Paiements via passerelle certifiée. Aucune donnée bancaire stockée."
-          />
-          <Trust
-            icon={<Zap className="h-5 w-5 text-magenta" />}
-            title="Validation instantanée"
-            text="Votre vote est ajouté dès la confirmation du paiement par notre serveur."
-          />
-          <Trust
-            icon={<Sparkles className="h-5 w-5 text-gold" />}
-            title="Transparence totale"
-            text="Chaque transaction est horodatée et auditable par l'organisation."
-          />
-        </div>
-      </section>
+
 
       <SiteFooter />
     </div>

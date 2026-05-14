@@ -235,25 +235,10 @@ function PodiumCard({
       </div>
       <div className="p-4">
         <h3 className="truncate font-display text-base font-bold">{c.name}</h3>
-        <p className="mt-1.5 font-display text-lg font-extrabold text-gold">
-          {formatXAF(c.total_collected)}
+        <p className="mt-1.5 text-xs uppercase tracking-wider text-muted-foreground">
+          {c.category === "miss" ? "Miss" : "Master"} · {formatNumber(c.total_votes)} votes
         </p>
-        <p className="text-xs text-muted-foreground">{formatNumber(c.total_votes)} votes</p>
       </div>
     </Link>
-  );
-}
-
-function Trust({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
-  return (
-    <div className="flex gap-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background">
-        {icon}
-      </div>
-      <div>
-        <p className="font-display font-semibold">{title}</p>
-        <p className="mt-1 text-sm text-muted-foreground">{text}</p>
-      </div>
-    </div>
   );
 }

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Heart, Share2, TrendingUp, ArrowLeft, Instagram, Music2 } from "lucide-react";
 import { getCandidate } from "@/lib/public.functions";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
-import { formatXAF, formatNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/c/$slug")({

@@ -14,16 +14,210 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      candidates: {
+        Row: {
+          bio: string | null
+          category: Database["public"]["Enums"]["candidate_category"]
+          created_at: string
+          display_order: number
+          gallery: Json
+          id: string
+          is_active: boolean
+          name: string
+          photo_url: string | null
+          slug: string
+          socials: Json
+          updated_at: string
+        }
+        Insert: {
+          bio?: string | null
+          category?: Database["public"]["Enums"]["candidate_category"]
+          created_at?: string
+          display_order?: number
+          gallery?: Json
+          id?: string
+          is_active?: boolean
+          name: string
+          photo_url?: string | null
+          slug: string
+          socials?: Json
+          updated_at?: string
+        }
+        Update: {
+          bio?: string | null
+          category?: Database["public"]["Enums"]["candidate_category"]
+          created_at?: string
+          display_order?: number
+          gallery?: Json
+          id?: string
+          is_active?: boolean
+          name?: string
+          photo_url?: string | null
+          slug?: string
+          socials?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vote_packages: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          display_order: number
+          id: string
+          is_active: boolean
+          label: string
+          votes: number
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          label: string
+          votes: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          label?: string
+          votes?: number
+        }
+        Relationships: []
+      }
+      vote_transactions: {
+        Row: {
+          amount: number
+          buyer_contact: string | null
+          buyer_name: string | null
+          candidate_id: string
+          created_at: string
+          currency: string
+          id: string
+          metadata: Json
+          package_id: string | null
+          paid_at: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          provider: string
+          provider_ref: string
+          vote_count: number
+        }
+        Insert: {
+          amount: number
+          buyer_contact?: string | null
+          buyer_name?: string | null
+          candidate_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json
+          package_id?: string | null
+          paid_at?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          provider: string
+          provider_ref: string
+          vote_count: number
+        }
+        Update: {
+          amount?: number
+          buyer_contact?: string | null
+          buyer_name?: string | null
+          candidate_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json
+          package_id?: string | null
+          paid_at?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          provider?: string
+          provider_ref?: string
+          vote_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vote_transactions_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vote_transactions_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vote_transactions_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "vote_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      candidate_stats: {
+        Row: {
+          bio: string | null
+          category: Database["public"]["Enums"]["candidate_category"] | null
+          display_order: number | null
+          id: string | null
+          is_active: boolean | null
+          name: string | null
+          photo_url: string | null
+          slug: string | null
+          socials: Json | null
+          total_collected: number | null
+          total_votes: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      candidate_category: "miss" | "master"
+      payment_status: "pending" | "paid" | "failed" | "refunded"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +344,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      candidate_category: ["miss", "master"],
+      payment_status: ["pending", "paid", "failed", "refunded"],
+    },
   },
 } as const

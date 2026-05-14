@@ -4,14 +4,9 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowRight,
   Crown,
-  ShieldCheck,
-  Sparkles,
-  Zap,
   Users,
   Heart,
-  Coins,
   Calendar,
-  HelpCircle,
 } from "lucide-react";
 import { getRanking } from "@/lib/public.functions";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";

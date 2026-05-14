@@ -1,39 +1,63 @@
 import { Link } from "@tanstack/react-router";
-import { Crown } from "lucide-react";
+import { Crown, LogIn } from "lucide-react";
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-border/50 bg-background/70 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-        <Link to="/" className="flex items-center gap-2">
-          <Crown className="h-5 w-5 text-gold" />
-          <span className="font-display text-lg font-bold tracking-tight">
-            Miss<span className="text-gold">&</span>Master
-          </span>
+    <header className="sticky top-0 z-40 border-b border-border/40 bg-background/75 backdrop-blur-xl">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+        {/* Logo stacked */}
+        <Link to="/" className="flex items-center gap-2.5 shrink-0">
+          <div className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-gold/40 bg-gradient-to-br from-gold/20 to-magenta/10">
+            <Crown className="h-5 w-5 text-gold" />
+          </div>
+          <div className="leading-none">
+            <p className="font-display text-base font-extrabold tracking-tight">
+              MISS <span className="text-gold">&</span> MASTER
+            </p>
+            <p className="mt-1 text-[10px] font-semibold tracking-[0.3em] text-gold/80">2026</p>
+          </div>
         </Link>
-        <nav className="flex items-center gap-1 sm:gap-2">
-          <Link
-            to="/"
-            className="hidden rounded-full px-4 py-2 text-sm text-muted-foreground transition hover:text-foreground sm:inline-flex"
-            activeOptions={{ exact: true }}
-            activeProps={{ className: "text-foreground" }}
+
+        {/* Nav */}
+        <nav className="hidden items-center gap-1 md:flex">
+          {[
+            { to: "/", label: "Accueil", exact: true },
+            { to: "/classement", label: "Candidats" },
+            { to: "/classement", label: "Classement" },
+          ].map((item, i) => (
+            <Link
+              key={i}
+              to={item.to}
+              activeOptions={item.exact ? { exact: true } : undefined}
+              className="relative rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+              activeProps={{ className: "text-foreground" }}
+            >
+              {item.label}
+            </Link>
+          ))}
+          <a
+            href="#trust"
+            className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
           >
-            Accueil
+            À propos
+          </a>
+        </nav>
+
+        {/* CTAs */}
+        <div className="flex items-center gap-2">
+          <Link
+            to="/admin"
+            className="hidden items-center gap-1.5 rounded-full border border-violet/40 bg-violet/10 px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-violet/20 sm:inline-flex"
+          >
+            <LogIn className="h-3.5 w-3.5" /> Se connecter
           </Link>
           <Link
             to="/classement"
-            className="rounded-full px-4 py-2 text-sm text-muted-foreground transition hover:text-foreground"
-            activeProps={{ className: "text-foreground" }}
+            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-gold to-[oklch(0.72_0.16_70)] px-4 py-2 text-xs font-bold text-primary-foreground shadow-[0_8px_24px_-8px_oklch(0.82_0.13_85_/_0.6)] transition hover:scale-[1.03] sm:px-5 sm:text-sm"
           >
-            Classement
+            Voter maintenant
           </Link>
-          <Link
-            to="/admin"
-            className="rounded-full border border-border/60 px-4 py-2 text-sm text-muted-foreground transition hover:border-gold/60 hover:text-foreground"
-          >
-            Admin
-          </Link>
-        </nav>
+        </div>
       </div>
     </header>
   );
@@ -41,12 +65,22 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-border/50 bg-background py-10">
-      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 text-sm text-muted-foreground sm:flex-row sm:px-6">
-        <p>© {new Date().getFullYear()} Miss & Master. Tous droits réservés.</p>
-        <p className="text-xs">
-          Le classement officiel est basé sur le montant total collecté via les votes validés.
-        </p>
+    <footer className="border-t border-border/50 bg-background py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:justify-between sm:text-left">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-gold/40 bg-gold/10">
+              <Crown className="h-4 w-4 text-gold" />
+            </div>
+            <div className="leading-none">
+              <p className="font-display text-sm font-bold">MISS <span className="text-gold">&</span> MASTER</p>
+              <p className="mt-1 text-[9px] tracking-[0.3em] text-gold/70">ÉDITION 2026</p>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            © {new Date().getFullYear()} — Classement basé sur le total des votes payés validés.
+          </p>
+        </div>
       </div>
     </footer>
   );

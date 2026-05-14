@@ -1,7 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, Crown, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import {
+  ArrowRight,
+  Crown,
+  ShieldCheck,
+  Sparkles,
+  Zap,
+  Users,
+  Heart,
+  Coins,
+  Calendar,
+  HelpCircle,
+} from "lucide-react";
 import { getRanking } from "@/lib/public.functions";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { RankingList } from "@/components/ranking-list";
@@ -13,11 +24,11 @@ export const Route = createFileRoute("/")({
   component: HomePage,
   head: () => ({
     meta: [
-      { title: "Miss & Master — Votez pour vos favoris" },
+      { title: "Miss & Master 2026 — Votez pour vos favoris" },
       {
         name: "description",
         content:
-          "Soutenez votre candidat Miss ou Master préféré. Vote payant 100% sécurisé, classement officiel en temps réel.",
+          "Soutenez votre candidat(e) Miss ou Master favori(te). Vote payant 100% sécurisé, classement officiel en temps réel.",
       },
     ],
   }),
@@ -31,75 +42,85 @@ function HomePage() {
     refetchInterval: 15000,
   });
 
-  const top3 = data?.ranking.slice(0, 3) ?? [];
+  const top5 = data?.ranking.slice(0, 5) ?? [];
   const all = data?.ranking ?? [];
+  const daysLeft = 12;
 
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
 
-      {/* HERO */}
-      <section className="relative overflow-hidden bg-grain">
-        <div className="mx-auto grid max-w-7xl gap-10 px-4 pb-16 pt-12 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:pb-24 lg:pt-20">
-          <div className="flex flex-col justify-center">
-            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-gold/30 bg-gold/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-gold">
-              <Sparkles className="h-3 w-3" /> Édition 2026
-            </span>
-            <h1 className="mt-6 font-display text-5xl font-bold leading-[0.95] sm:text-6xl lg:text-7xl">
-              Couronnez la
-              <span className="block text-gradient-gold">prochaine légende.</span>
+      {/* HERO with royal violet/magenta gradient */}
+      <section className="relative overflow-hidden bg-royal">
+        {/* sparkle texture */}
+        <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:32px_32px]" />
+
+        <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 pb-14 pt-16 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:gap-12 lg:pb-20 lg:pt-24">
+          <div className="flex flex-col">
+            <h1 className="font-display text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-[3.75rem]">
+              Soutenez votre
+              <br />
+              candidat(e) <span className="text-gradient-gold">favori(te)</span>
             </h1>
-            <p className="mt-6 max-w-xl text-lg text-muted-foreground">
-              Chaque vote est un soutien réel. Chaque don propulse un candidat. Le classement
-              officiel est basé sur le montant total collecté.
+            <p className="mt-5 max-w-xl text-base text-white/70 sm:text-lg">
+              Chaque vote compte, chaque soutien fait la différence.
+              <br className="hidden sm:block" />
+              Ensemble, faisons de cet événement un succès !
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                to="/classement"
-                className="group inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground transition hover:ring-gold-glow"
-              >
-                Voir le classement
-                <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-              </Link>
               <a
                 href="#candidats"
-                className="inline-flex items-center gap-2 rounded-full border border-border bg-card/40 px-6 py-3.5 text-sm font-semibold transition hover:border-magenta/60"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-gold to-[oklch(0.72_0.16_70)] px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-[0_12px_32px_-8px_oklch(0.82_0.13_85_/_0.5)] transition hover:scale-[1.02]"
               >
                 Découvrir les candidats
+                <ArrowRight className="h-4 w-4" />
+              </a>
+              <a
+                href="#how"
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur transition hover:border-gold/50 hover:bg-white/10"
+              >
+                <HelpCircle className="h-4 w-4" /> Comment voter ?
               </a>
             </div>
 
-            {/* KPIs */}
-            <div className="mt-10 grid grid-cols-3 gap-3 sm:gap-6">
+            {/* KPIs row */}
+            <div className="mt-10 grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-4">
               <Kpi
-                label="Collecté"
-                value={isLoading ? "—" : formatXAF(data!.totals.collected)}
-                accent="gold"
-              />
-              <Kpi
-                label="Votes"
-                value={isLoading ? "—" : formatNumber(data!.totals.votes)}
-                accent="magenta"
-              />
-              <Kpi
+                icon={<Users className="h-4 w-4" />}
                 label="Candidats"
                 value={isLoading ? "—" : String(data!.totals.candidates)}
-                accent="default"
+              />
+              <Kpi
+                icon={<Heart className="h-4 w-4" />}
+                label="Votes"
+                value={isLoading ? "—" : formatNumber(data!.totals.votes)}
+              />
+              <Kpi
+                icon={<Coins className="h-4 w-4" />}
+                label="Collectés"
+                value={isLoading ? "—" : formatXAF(data!.totals.collected)}
+              />
+              <Kpi
+                icon={<Calendar className="h-4 w-4" />}
+                label="Jours restants"
+                value={String(daysLeft)}
               />
             </div>
           </div>
 
           {/* Visual */}
           <div className="relative grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="relative aspect-[3/4] overflow-hidden rounded-3xl ring-gold-glow">
+            <div className="relative aspect-[3/4] overflow-hidden rounded-3xl ring-1 ring-gold/30 ring-gold-glow">
               <img src={heroMiss} alt="Candidate Miss" className="h-full w-full object-cover" />
-              <span className="absolute left-3 top-3 rounded-full bg-magenta/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white">
+              <div className="absolute inset-0 bg-gradient-to-t from-violet/40 via-transparent" />
+              <span className="absolute left-3 top-3 rounded-full bg-magenta px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white">
                 Miss
               </span>
             </div>
-            <div className="relative mt-8 aspect-[3/4] overflow-hidden rounded-3xl ring-magenta-glow">
+            <div className="relative mt-10 aspect-[3/4] overflow-hidden rounded-3xl ring-1 ring-magenta/30 ring-magenta-glow">
               <img src={heroMaster} alt="Candidate Master" className="h-full w-full object-cover" />
-              <span className="absolute left-3 top-3 rounded-full bg-gold/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary-foreground">
+              <div className="absolute inset-0 bg-gradient-to-t from-violet/40 via-transparent" />
+              <span className="absolute left-3 top-3 rounded-full bg-gold px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary-foreground">
                 Master
               </span>
             </div>
@@ -107,75 +128,25 @@ function HomePage() {
         </div>
       </section>
 
-      {/* PODIUM TOP 3 */}
-      {top3.length > 0 && (
-        <section id="candidats" className="border-t border-border/40 py-16 sm:py-24">
+      {/* CLASSEMENT ACTUEL — horizontal cards */}
+      {top5.length > 0 && (
+        <section id="candidats" className="border-t border-border/40 py-14 sm:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <div className="flex items-end justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-gold">Podium en direct</p>
-                <h2 className="mt-2 font-display text-3xl font-bold sm:text-4xl">
-                  Le top 3 du moment
-                </h2>
-              </div>
+              <h2 className="font-display text-2xl font-extrabold sm:text-3xl">
+                Classement actuel
+              </h2>
               <Link
                 to="/classement"
-                className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline-flex"
+                className="text-sm font-semibold text-gold hover:text-gold/80"
               >
-                Tout voir →
+                Voir tout →
               </Link>
             </div>
 
-            <div className="mt-10 grid gap-5 sm:grid-cols-3">
-              {top3.map((c, i) => (
-                <Link
-                  key={c.id}
-                  to="/c/$slug"
-                  params={{ slug: c.slug }}
-                  className="group relative overflow-hidden rounded-3xl border border-border/60 bg-card transition hover:-translate-y-1 hover:border-gold/60"
-                >
-                  <div className="relative aspect-[3/4] overflow-hidden">
-                    {c.photo_url ? (
-                      <img
-                        src={c.photo_url}
-                        alt={c.name}
-                        loading="lazy"
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="h-full w-full bg-muted" />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-                    <div className="absolute left-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-background/80 font-display text-lg font-bold text-gold backdrop-blur">
-                      {i + 1}
-                    </div>
-                    {i === 0 && (
-                      <Crown className="absolute right-4 top-4 h-6 w-6 text-gold drop-shadow-lg" />
-                    )}
-                  </div>
-                  <div className="absolute inset-x-0 bottom-0 p-5">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-display text-xl font-bold">{c.name}</h3>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider ${
-                          c.category === "miss"
-                            ? "bg-magenta/20 text-magenta"
-                            : "bg-gold/20 text-gold"
-                        }`}
-                      >
-                        {c.category}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-xl font-bold text-gold">
-                        {formatXAF(c.total_collected)}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatNumber(c.total_votes)} votes
-                      </span>
-                    </div>
-                  </div>
-                </Link>
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              {top5.map((c, i) => (
+                <PodiumCard key={c.id} candidate={c} rank={i + 1} />
               ))}
             </div>
           </div>
@@ -186,7 +157,9 @@ function HomePage() {
       <section className="border-t border-border/40 py-16">
         <div className="mx-auto max-w-3xl px-4 sm:px-6">
           <div className="flex items-end justify-between">
-            <h2 className="font-display text-2xl font-bold sm:text-3xl">Classement officiel</h2>
+            <h2 className="font-display text-2xl font-extrabold sm:text-3xl">
+              Classement officiel
+            </h2>
             <span className="text-xs text-muted-foreground">Mis à jour en temps réel</span>
           </div>
           <div className="mt-6">
@@ -204,7 +177,7 @@ function HomePage() {
       </section>
 
       {/* TRUST */}
-      <section className="border-t border-border/40 bg-card/30 py-16">
+      <section id="trust" className="border-t border-border/40 bg-card/30 py-16">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:grid-cols-3 sm:px-6">
           <Trust
             icon={<ShieldCheck className="h-5 w-5 text-gold" />}
@@ -229,17 +202,80 @@ function HomePage() {
   );
 }
 
-function Kpi({ label, value, accent }: { label: string; value: string; accent: "gold" | "magenta" | "default" }) {
-  const colors = {
-    gold: "text-gold",
-    magenta: "text-magenta",
-    default: "text-foreground",
-  } as const;
+function Kpi({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-card/60 p-4">
-      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
-      <p className={`mt-1 font-display text-2xl font-bold ${colors[accent]}`}>{value}</p>
+    <div className="flex items-center gap-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold">
+        {icon}
+      </div>
+      <div className="leading-tight">
+        <p className="font-display text-xl font-extrabold sm:text-2xl">{value}</p>
+        <p className="text-[11px] uppercase tracking-wider text-white/55">{label}</p>
+      </div>
     </div>
+  );
+}
+
+const RANK_STYLES: Record<number, string> = {
+  1: "bg-gradient-to-br from-gold to-[oklch(0.65_0.15_60)] text-primary-foreground",
+  2: "bg-gradient-to-br from-[oklch(0.85_0.02_280)] to-[oklch(0.6_0.02_280)] text-primary-foreground",
+  3: "bg-gradient-to-br from-[oklch(0.7_0.15_45)] to-[oklch(0.5_0.12_35)] text-white",
+  4: "bg-gradient-to-br from-violet to-[oklch(0.4_0.18_300)] text-white",
+  5: "bg-gradient-to-br from-magenta to-[oklch(0.5_0.22_355)] text-white",
+};
+
+function PodiumCard({
+  candidate: c,
+  rank,
+}: {
+  candidate: {
+    id: string;
+    name: string;
+    slug: string;
+    category: "miss" | "master";
+    photo_url: string | null;
+    total_collected: number;
+    total_votes: number;
+  };
+  rank: number;
+}) {
+  return (
+    <Link
+      to="/c/$slug"
+      params={{ slug: c.slug }}
+      className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card transition hover:-translate-y-1 hover:border-gold/50"
+    >
+      <div className="relative aspect-[4/5] overflow-hidden">
+        {c.photo_url ? (
+          <img
+            src={c.photo_url}
+            alt={c.name}
+            loading="lazy"
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="h-full w-full bg-muted" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
+        <div
+          className={`absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full font-display text-sm font-extrabold shadow-lg ${
+            RANK_STYLES[rank] ?? "bg-card text-foreground"
+          }`}
+        >
+          {rank}
+        </div>
+        {rank === 1 && (
+          <Crown className="absolute right-3 top-3 h-5 w-5 text-gold drop-shadow-lg" />
+        )}
+      </div>
+      <div className="p-4">
+        <h3 className="truncate font-display text-base font-bold">{c.name}</h3>
+        <p className="mt-1.5 font-display text-lg font-extrabold text-gold">
+          {formatXAF(c.total_collected)}
+        </p>
+        <p className="text-xs text-muted-foreground">{formatNumber(c.total_votes)} votes</p>
+      </div>
+    </Link>
   );
 }
 

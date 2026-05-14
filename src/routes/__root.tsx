@@ -58,17 +58,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Miss & Master" },
+      { title: "Miss JG" },
       {
         name: "description",
         content:
           "Plateforme officielle de vote payant pour le concours Miss & Master. Soutenez votre candidat préféré, chaque vote compte.",
       },
-      { property: "og:title", content: "Miss & Master" },
+      { property: "og:title", content: "Miss JG" },
       { property: "og:description", content: "A modern, secure, and responsive web platform for managing, monetizing, and live voting in “Miss & Master” style competitions." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Miss & Master" },
+      { name: "twitter:title", content: "Miss JG" },
       { name: "description", content: "A modern, secure, and responsive web platform for managing, monetizing, and live voting in “Miss & Master” style competitions." },
       { name: "twitter:description", content: "A modern, secure, and responsive web platform for managing, monetizing, and live voting in “Miss & Master” style competitions." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/cc554f9e-5ee7-4fd1-ac7d-963af3d77d90" },

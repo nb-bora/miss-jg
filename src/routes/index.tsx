@@ -70,16 +70,10 @@ function HomePage() {
                 Découvrir les candidats
                 <ArrowRight className="h-4 w-4" />
               </a>
-              <a
-                href="#how"
-                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur transition hover:border-gold/50 hover:bg-white/10"
-              >
-                <HelpCircle className="h-4 w-4" /> Comment voter ?
-              </a>
             </div>
 
             {/* KPIs row */}
-            <div className="mt-10 grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-4">
+            <div className="mt-10 grid grid-cols-3 gap-x-8 gap-y-5">
               <Kpi
                 icon={<Users className="h-4 w-4" />}
                 label="Candidats"
@@ -89,11 +83,6 @@ function HomePage() {
                 icon={<Heart className="h-4 w-4" />}
                 label="Votes"
                 value={isLoading ? "—" : formatNumber(data!.totals.votes)}
-              />
-              <Kpi
-                icon={<Coins className="h-4 w-4" />}
-                label="Collectés"
-                value={isLoading ? "—" : formatXAF(data!.totals.collected)}
               />
               <Kpi
                 icon={<Calendar className="h-4 w-4" />}

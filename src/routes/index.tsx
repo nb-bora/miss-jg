@@ -11,7 +11,7 @@ import {
 import { getRanking } from "@/lib/public.functions";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { RankingList } from "@/components/ranking-list";
-import { formatXAF, formatNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import heroMiss from "@/assets/hero-miss.jpg";
 import heroMaster from "@/assets/hero-master.jpg";
 

@@ -61,10 +61,7 @@ export function RankingList({ items }: { items: Item[] }) {
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate font-display text-base font-bold">{c.name}</p>
-              <p className="font-display text-sm font-extrabold text-gold">
-                {formatXAF(c.total_collected)}
-              </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {formatNumber(c.total_votes)} votes
               </p>
             </div>

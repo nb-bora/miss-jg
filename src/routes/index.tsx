@@ -4,19 +4,14 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowRight,
   Crown,
-  ShieldCheck,
-  Sparkles,
-  Zap,
   Users,
   Heart,
-  Coins,
   Calendar,
-  HelpCircle,
 } from "lucide-react";
 import { getRanking } from "@/lib/public.functions";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { RankingList } from "@/components/ranking-list";
-import { formatXAF, formatNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import heroMiss from "@/assets/hero-miss.jpg";
 import heroMaster from "@/assets/hero-master.jpg";
 
@@ -75,16 +70,10 @@ function HomePage() {
                 Découvrir les candidats
                 <ArrowRight className="h-4 w-4" />
               </a>
-              <a
-                href="#how"
-                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur transition hover:border-gold/50 hover:bg-white/10"
-              >
-                <HelpCircle className="h-4 w-4" /> Comment voter ?
-              </a>
             </div>
 
             {/* KPIs row */}
-            <div className="mt-10 grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-4">
+            <div className="mt-10 grid grid-cols-3 gap-x-8 gap-y-5">
               <Kpi
                 icon={<Users className="h-4 w-4" />}
                 label="Candidats"
@@ -94,11 +83,6 @@ function HomePage() {
                 icon={<Heart className="h-4 w-4" />}
                 label="Votes"
                 value={isLoading ? "—" : formatNumber(data!.totals.votes)}
-              />
-              <Kpi
-                icon={<Coins className="h-4 w-4" />}
-                label="Collectés"
-                value={isLoading ? "—" : formatXAF(data!.totals.collected)}
               />
               <Kpi
                 icon={<Calendar className="h-4 w-4" />}
@@ -176,26 +160,7 @@ function HomePage() {
         </div>
       </section>
 
-      {/* TRUST */}
-      <section id="trust" className="border-t border-border/40 bg-card/30 py-16">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:grid-cols-3 sm:px-6">
-          <Trust
-            icon={<ShieldCheck className="h-5 w-5 text-gold" />}
-            title="100% sécurisé"
-            text="Paiements via passerelle certifiée. Aucune donnée bancaire stockée."
-          />
-          <Trust
-            icon={<Zap className="h-5 w-5 text-magenta" />}
-            title="Validation instantanée"
-            text="Votre vote est ajouté dès la confirmation du paiement par notre serveur."
-          />
-          <Trust
-            icon={<Sparkles className="h-5 w-5 text-gold" />}
-            title="Transparence totale"
-            text="Chaque transaction est horodatée et auditable par l'organisation."
-          />
-        </div>
-      </section>
+
 
       <SiteFooter />
     </div>
@@ -270,25 +235,10 @@ function PodiumCard({
       </div>
       <div className="p-4">
         <h3 className="truncate font-display text-base font-bold">{c.name}</h3>
-        <p className="mt-1.5 font-display text-lg font-extrabold text-gold">
-          {formatXAF(c.total_collected)}
+        <p className="mt-1.5 text-xs uppercase tracking-wider text-muted-foreground">
+          {c.category === "miss" ? "Miss" : "Master"} · {formatNumber(c.total_votes)} votes
         </p>
-        <p className="text-xs text-muted-foreground">{formatNumber(c.total_votes)} votes</p>
       </div>
     </Link>
-  );
-}
-
-function Trust({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
-  return (
-    <div className="flex gap-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background">
-        {icon}
-      </div>
-      <div>
-        <p className="font-display font-semibold">{title}</p>
-        <p className="mt-1 text-sm text-muted-foreground">{text}</p>
-      </div>
-    </div>
   );
 }

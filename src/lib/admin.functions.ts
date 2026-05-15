@@ -142,13 +142,14 @@ export const upsertCandidate = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     await assertAdmin(context.userId);
-    const payload: Record<string, unknown> = { ...data };
-    if (data.id) {
-      delete payload.id;
-      const { error } = await supabaseAdmin.from("candidates").update(payload).eq("id", data.id);
+    const { id, ...payload } = data;
+    if (id) {
+      const { error } = await supabaseAdmin.from("candidates").update(payload).eq("id", id);
       if (error) throw new Error(error.message);
     } else {
-      const { error } = await supabaseAdmin.from("candidates").insert(payload as never);
+      const { error } = await supabaseAdmin
+        .from("candidates")
+        .insert(payload as typeof payload & { name: string; slug: string });
       if (error) throw new Error(error.message);
     }
     return { ok: true };
@@ -233,13 +234,14 @@ export const upsertPackage = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     await assertAdmin(context.userId);
-    const payload: Record<string, unknown> = { ...data };
-    if (data.id) {
-      delete payload.id;
-      const { error } = await supabaseAdmin.from("vote_packages").update(payload).eq("id", data.id);
+    const { id, ...payload } = data;
+    if (id) {
+      const { error } = await supabaseAdmin.from("vote_packages").update(payload).eq("id", id);
       if (error) throw new Error(error.message);
     } else {
-      const { error } = await supabaseAdmin.from("vote_packages").insert(payload as never);
+      const { error } = await supabaseAdmin
+        .from("vote_packages")
+        .insert(payload as typeof payload & { label: string; amount: number; votes: number });
       if (error) throw new Error(error.message);
     }
     return { ok: true };

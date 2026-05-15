@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, LogOut, Plus, ShieldCheck } from "lucide-react";
+import { Loader2, LogOut, Plus, ShieldCheck, Pencil, Trash2, Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   adminBootstrap,
@@ -12,6 +12,11 @@ import {
   listTransactions,
   setCandidateActive,
   upsertCandidate,
+  deleteCandidate,
+  uploadCandidatePhoto,
+  listAllPackages,
+  upsertPackage,
+  deletePackage,
 } from "@/lib/admin.functions";
 import { SiteHeader } from "@/components/site-chrome";
 import { formatXAF, formatNumber, formatDate } from "@/lib/format";
@@ -19,7 +24,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
-  head: () => ({ meta: [{ title: "Admin — Miss & Master" }] }),
+  head: () => ({ meta: [{ title: "Admin — Miss-Mister Journées Gestion" }] }),
 });
 
 function AdminPage() {
@@ -71,8 +76,8 @@ function AuthForm() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erreur");
     } finally {
       setLoading(false);
     }
@@ -130,6 +135,8 @@ function AuthForm() {
   );
 }
 
+type Tab = "dashboard" | "transactions" | "candidates" | "packages";
+
 function AdminConsole() {
   const qc = useQueryClient();
   const bootstrap = useServerFn(adminBootstrap);
@@ -137,12 +144,11 @@ function AdminConsole() {
   const dash = useServerFn(getDashboard);
   const txs = useServerFn(listTransactions);
   const cands = useServerFn(listAllCandidates);
-  const upsert = useServerFn(upsertCandidate);
   const toggle = useServerFn(setCandidateActive);
+  const pkgs = useServerFn(listAllPackages);
 
-  const [tab, setTab] = useState<"dashboard" | "transactions" | "candidates">("dashboard");
+  const [tab, setTab] = useState<Tab>("dashboard");
 
-  // Bootstrap: first user becomes admin
   useEffect(() => {
     bootstrap().catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -163,6 +169,11 @@ function AdminConsole() {
     queryKey: ["admin-cands"],
     queryFn: () => cands(),
     enabled: !!meQ.data?.isAdmin && tab === "candidates",
+  });
+  const pkgQ = useQuery({
+    queryKey: ["admin-pkgs"],
+    queryFn: () => pkgs(),
+    enabled: !!meQ.data?.isAdmin && tab === "packages",
   });
 
   const toggleM = useMutation({
@@ -198,6 +209,13 @@ function AdminConsole() {
     );
   }
 
+  const tabs: { key: Tab; label: string }[] = [
+    { key: "dashboard", label: "Dashboard" },
+    { key: "transactions", label: "Transactions" },
+    { key: "candidates", label: "Candidats" },
+    { key: "packages", label: "Packs de vote" },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
@@ -215,16 +233,16 @@ function AdminConsole() {
           </button>
         </div>
 
-        <div className="mt-6 inline-flex rounded-full border border-border/60 bg-card/60 p-1">
-          {(["dashboard", "transactions", "candidates"] as const).map((t) => (
+        <div className="mt-6 flex flex-wrap gap-1 rounded-full border border-border/60 bg-card/60 p-1">
+          {tabs.map((t) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`rounded-full px-5 py-2 text-sm capitalize transition ${
-                tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`rounded-full px-5 py-2 text-sm transition ${
+                tab === t.key ? "bg-primary text-primary-foreground" : "text-muted-foreground"
               }`}
             >
-              {t === "dashboard" ? "Dashboard" : t === "transactions" ? "Transactions" : "Candidats"}
+              {t.label}
             </button>
           ))}
         </div>
@@ -241,11 +259,14 @@ function AdminConsole() {
               data={candQ.data ?? []}
               loading={candQ.isLoading}
               onToggle={(id, v) => toggleM.mutate({ id, is_active: v })}
-              onCreate={async (input) => {
-                await upsert({ data: input });
-                toast.success("Candidat enregistré");
-                qc.invalidateQueries({ queryKey: ["admin-cands"] });
-              }}
+              onChanged={() => qc.invalidateQueries({ queryKey: ["admin-cands"] })}
+            />
+          )}
+          {tab === "packages" && (
+            <PackagesView
+              data={pkgQ.data ?? []}
+              loading={pkgQ.isLoading}
+              onChanged={() => qc.invalidateQueries({ queryKey: ["admin-pkgs"] })}
             />
           )}
         </div>
@@ -254,7 +275,17 @@ function AdminConsole() {
   );
 }
 
-function DashboardView({ data, loading }: { data: any; loading: boolean }) {
+type DashData = {
+  totalCollected: number;
+  totalVotes: number;
+  avgBasket: number;
+  txToday: number;
+  successRate: number;
+  candidatesCount: number;
+  top: { name: string; slug: string; total_collected: number; total_votes: number }[];
+};
+
+function DashboardView({ data, loading }: { data?: DashData; loading: boolean }) {
   if (loading || !data) return <div className="h-40 animate-pulse rounded-2xl bg-card/60" />;
   const kpis = [
     { label: "Total collecté", value: formatXAF(data.totalCollected), accent: "text-gold" },
@@ -290,7 +321,7 @@ function DashboardView({ data, loading }: { data: any; loading: boolean }) {
               </tr>
             </thead>
             <tbody>
-              {data.top.map((t: any, i: number) => (
+              {data.top.map((t, i) => (
                 <tr key={t.slug} className="border-t border-border/40">
                   <td className="px-4 py-3 font-display text-gold">{i + 1}</td>
                   <td className="px-4 py-3">{t.name}</td>
@@ -308,7 +339,19 @@ function DashboardView({ data, loading }: { data: any; loading: boolean }) {
   );
 }
 
-function TransactionsView({ data, loading }: { data: any[]; loading: boolean }) {
+type TxRow = {
+  id: string;
+  amount: number;
+  vote_count: number;
+  provider_ref: string;
+  payment_status: string;
+  buyer_name: string | null;
+  buyer_contact: string | null;
+  created_at: string;
+  candidate_name: string;
+};
+
+function TransactionsView({ data, loading }: { data: TxRow[]; loading: boolean }) {
   if (loading) return <div className="h-40 animate-pulse rounded-2xl bg-card/60" />;
   return (
     <div className="overflow-x-auto rounded-2xl border border-border/60">
@@ -367,40 +410,49 @@ function StatusBadge({ status }: { status: string }) {
     refunded: "bg-magenta/15 text-magenta",
   };
   return (
-    <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider ${map[status] ?? ""}`}>
+    <span
+      className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider ${map[status] ?? ""}`}
+    >
       {status}
     </span>
   );
 }
 
+// ===== Candidates =====
+
+type CandidateRow = {
+  id: string;
+  name: string;
+  slug: string;
+  category: "miss" | "master";
+  bio: string | null;
+  is_active: boolean;
+  display_order: number;
+  photo_url: string | null;
+};
+
 function CandidatesView({
   data,
   loading,
   onToggle,
-  onCreate,
+  onChanged,
 }: {
-  data: any[];
+  data: CandidateRow[];
   loading: boolean;
   onToggle: (id: string, v: boolean) => void;
-  onCreate: (input: any) => Promise<void>;
+  onChanged: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    slug: "",
-    category: "miss" as "miss" | "master",
-    bio: "",
-    photo_url: "",
-  });
+  const del = useServerFn(deleteCandidate);
+  const [editing, setEditing] = useState<CandidateRow | "new" | null>(null);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Supprimer "${name}" ? Cette action est irréversible.`)) return;
     try {
-      await onCreate({ ...form, photo_url: form.photo_url || null, bio: form.bio || null });
-      setOpen(false);
-      setForm({ name: "", slug: "", category: "miss", bio: "", photo_url: "" });
-    } catch (e: any) {
-      toast.error(e.message);
+      await del({ data: { id } });
+      toast.success("Candidat supprimé");
+      onChanged();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur");
     }
   };
 
@@ -408,56 +460,22 @@ function CandidatesView({
     <div>
       <div className="flex justify-end">
         <button
-          onClick={() => setOpen(!open)}
+          onClick={() => setEditing("new")}
           className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground"
         >
           <Plus className="h-4 w-4" /> Nouveau candidat
         </button>
       </div>
 
-      {open && (
-        <form
-          onSubmit={submit}
-          className="mt-4 grid gap-3 rounded-2xl border border-gold/40 bg-card/60 p-5 sm:grid-cols-2"
-        >
-          <input
-            required
-            placeholder="Nom complet"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm"
-          />
-          <input
-            required
-            placeholder="slug-unique"
-            value={form.slug}
-            onChange={(e) => setForm({ ...form, slug: e.target.value })}
-            className="rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm"
-          />
-          <select
-            value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value as any })}
-            className="rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm"
-          >
-            <option value="miss">Miss</option>
-            <option value="master">Master</option>
-          </select>
-          <input
-            placeholder="URL photo (https://…)"
-            value={form.photo_url}
-            onChange={(e) => setForm({ ...form, photo_url: e.target.value })}
-            className="rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm"
-          />
-          <textarea
-            placeholder="Bio courte"
-            value={form.bio}
-            onChange={(e) => setForm({ ...form, bio: e.target.value })}
-            className="min-h-20 rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm sm:col-span-2"
-          />
-          <button className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground sm:col-span-2">
-            Enregistrer
-          </button>
-        </form>
+      {editing && (
+        <CandidateForm
+          initial={editing === "new" ? null : editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            onChanged();
+          }}
+        />
       )}
 
       {loading ? (
@@ -469,17 +487,22 @@ function CandidatesView({
               key={c.id}
               className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/60 p-3"
             >
-              <div className="h-12 w-12 overflow-hidden rounded-lg bg-muted">
+              <span className="w-6 text-center font-display text-sm text-gold">
+                {c.display_order}
+              </span>
+              <div className="h-14 w-14 overflow-hidden rounded-lg bg-muted">
                 {c.photo_url && (
                   <img src={c.photo_url} alt={c.name} className="h-full w-full object-cover" />
                 )}
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold">{c.name}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold truncate">{c.name}</p>
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] uppercase ${
-                      c.category === "miss" ? "bg-magenta/15 text-magenta" : "bg-gold/15 text-gold"
+                      c.category === "miss"
+                        ? "bg-magenta/15 text-magenta"
+                        : "bg-gold/15 text-gold"
                     }`}
                   >
                     {c.category}
@@ -502,10 +525,492 @@ function CandidatesView({
                 />
                 {c.is_active ? "Actif" : "Archivé"}
               </label>
+              <button
+                onClick={() => setEditing(c)}
+                className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                title="Modifier"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => handleDelete(c.id, c.name)}
+                className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                title="Supprimer"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+function CandidateForm({
+  initial,
+  onClose,
+  onSaved,
+}: {
+  initial: CandidateRow | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const upsert = useServerFn(upsertCandidate);
+  const upload = useServerFn(uploadCandidatePhoto);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    name: initial?.name ?? "",
+    slug: initial?.slug ?? "",
+    category: (initial?.category ?? "miss") as "miss" | "master",
+    bio: initial?.bio ?? "",
+    photo_url: initial?.photo_url ?? "",
+    display_order: initial?.display_order ?? 0,
+    is_active: initial?.is_active ?? true,
+  });
+
+  const handleFile = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image trop volumineuse (max 5 Mo)");
+      return;
+    }
+    setUploading(true);
+    try {
+      const buf = await file.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(buf).reduce((d, b) => d + String.fromCharCode(b), ""),
+      );
+      const res = await upload({
+        data: { filename: file.name, contentType: file.type || "image/jpeg", base64 },
+      });
+      setForm((f) => ({ ...f, photo_url: res.url }));
+      toast.success("Photo uploadée");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur upload");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await upsert({
+        data: {
+          ...(initial?.id ? { id: initial.id } : {}),
+          name: form.name,
+          slug: form.slug,
+          category: form.category,
+          bio: form.bio || null,
+          photo_url: form.photo_url || null,
+          display_order: form.display_order,
+          is_active: form.is_active,
+        },
+      });
+      toast.success("Candidat enregistré");
+      onSaved();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form
+      onSubmit={submit}
+      className="mt-4 grid gap-3 rounded-2xl border border-gold/40 bg-card/60 p-5 sm:grid-cols-2"
+    >
+      <div className="flex items-center justify-between sm:col-span-2">
+        <h3 className="font-display text-lg font-bold">
+          {initial ? "Modifier" : "Nouveau candidat"}
+        </h3>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg p-1 text-muted-foreground hover:bg-muted"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Photo uploader */}
+      <div className="sm:col-span-2">
+        <label className="mb-2 block text-xs uppercase tracking-wider text-muted-foreground">
+          Photo
+        </label>
+        <div className="flex items-center gap-4">
+          <div className="h-24 w-24 overflow-hidden rounded-xl bg-muted">
+            {form.photo_url ? (
+              <img src={form.photo_url} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                <Upload className="h-6 w-6" />
+              </div>
+            )}
+          </div>
+          <div className="flex-1 space-y-2">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleFile(f);
+              }}
+            />
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+              className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-4 py-2 text-sm font-semibold text-gold disabled:opacity-50"
+            >
+              {uploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              {uploading ? "Upload…" : "Uploader une photo"}
+            </button>
+            <input
+              placeholder="ou coller une URL"
+              value={form.photo_url}
+              onChange={(e) => setForm({ ...form, photo_url: e.target.value })}
+              className="w-full rounded-xl border border-border/60 bg-background px-4 py-2 text-xs"
+            />
+          </div>
+        </div>
+      </div>
+
+      <Field label="Nom complet">
+        <input
+          required
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          className="w-full rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm"
+        />
+      </Field>
+
+      <Field label="Slug (URL)">
+        <input
+          required
+          value={form.slug}
+          onChange={(e) => setForm({ ...form, slug: e.target.value })}
+          placeholder="ex: ophelie"
+          className="w-full rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm"
+        />
+      </Field>
+
+      <Field label="Catégorie">
+        <select
+          value={form.category}
+          onChange={(e) => setForm({ ...form, category: e.target.value as "miss" | "master" })}
+          className="w-full rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm"
+        >
+          <option value="miss">Miss</option>
+          <option value="master">Master</option>
+        </select>
+      </Field>
+
+      <Field label="Position (ordre d'affichage)">
+        <input
+          type="number"
+          min={0}
+          value={form.display_order}
+          onChange={(e) => setForm({ ...form, display_order: Number(e.target.value) })}
+          className="w-full rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm"
+        />
+      </Field>
+
+      <Field label="Description / bio" full>
+        <textarea
+          value={form.bio}
+          onChange={(e) => setForm({ ...form, bio: e.target.value })}
+          rows={5}
+          className="w-full rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm"
+        />
+      </Field>
+
+      <label className="inline-flex cursor-pointer items-center gap-2 text-sm sm:col-span-2">
+        <input
+          type="checkbox"
+          checked={form.is_active}
+          onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+          className="h-4 w-4"
+        />
+        Actif (visible publiquement)
+      </label>
+
+      <button
+        disabled={saving}
+        className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50 sm:col-span-2"
+      >
+        {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+        {initial ? "Enregistrer les modifications" : "Créer le candidat"}
+      </button>
+    </form>
+  );
+}
+
+function Field({
+  label,
+  children,
+  full,
+}: {
+  label: string;
+  children: React.ReactNode;
+  full?: boolean;
+}) {
+  return (
+    <div className={full ? "sm:col-span-2" : ""}>
+      <label className="mb-1.5 block text-xs uppercase tracking-wider text-muted-foreground">
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+// ===== Packages =====
+
+type PkgRow = {
+  id: string;
+  label: string;
+  amount: number;
+  votes: number;
+  currency: string;
+  is_active: boolean;
+  display_order: number;
+};
+
+function PackagesView({
+  data,
+  loading,
+  onChanged,
+}: {
+  data: PkgRow[];
+  loading: boolean;
+  onChanged: () => void;
+}) {
+  const upsert = useServerFn(upsertPackage);
+  const del = useServerFn(deletePackage);
+  const [editing, setEditing] = useState<PkgRow | "new" | null>(null);
+
+  const handleDelete = async (id: string, label: string) => {
+    if (!confirm(`Supprimer le pack "${label}" ?`)) return;
+    try {
+      await del({ data: { id } });
+      toast.success("Pack supprimé");
+      onChanged();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur");
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Définissez les packs de vote disponibles sur la page de paiement.
+        </p>
+        <button
+          onClick={() => setEditing("new")}
+          className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground"
+        >
+          <Plus className="h-4 w-4" /> Nouveau pack
+        </button>
+      </div>
+
+      {editing && (
+        <PackageForm
+          initial={editing === "new" ? null : editing}
+          onClose={() => setEditing(null)}
+          onSaved={async (input) => {
+            try {
+              await upsert({ data: input });
+              toast.success("Pack enregistré");
+              setEditing(null);
+              onChanged();
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Erreur");
+            }
+          }}
+        />
+      )}
+
+      {loading ? (
+        <div className="mt-6 h-40 animate-pulse rounded-2xl bg-card/60" />
+      ) : (
+        <div className="mt-6 overflow-hidden rounded-2xl border border-border/60">
+          <table className="w-full text-sm">
+            <thead className="bg-card/60 text-xs uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3 text-left">#</th>
+                <th className="px-4 py-3 text-left">Pack</th>
+                <th className="px-4 py-3 text-right">Votes</th>
+                <th className="px-4 py-3 text-right">Montant</th>
+                <th className="px-4 py-3 text-left">Statut</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
+                    Aucun pack défini
+                  </td>
+                </tr>
+              ) : (
+                data.map((p) => (
+                  <tr key={p.id} className="border-t border-border/40">
+                    <td className="px-4 py-3 font-display text-gold">{p.display_order}</td>
+                    <td className="px-4 py-3 font-semibold">{p.label}</td>
+                    <td className="px-4 py-3 text-right">{p.votes}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-gold">
+                      {formatXAF(p.amount)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider ${
+                          p.is_active
+                            ? "bg-gold/15 text-gold"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {p.is_active ? "Actif" : "Inactif"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => setEditing(p)}
+                        className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(p.id, p.label)}
+                        className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PackageForm({
+  initial,
+  onClose,
+  onSaved,
+}: {
+  initial: PkgRow | null;
+  onClose: () => void;
+  onSaved: (input: {
+    id?: string;
+    label: string;
+    amount: number;
+    votes: number;
+    currency: string;
+    display_order: number;
+    is_active: boolean;
+  }) => void;
+}) {
+  const [form, setForm] = useState({
+    label: initial?.label ?? "",
+    amount: initial?.amount ?? 500,
+    votes: initial?.votes ?? 1,
+    currency: initial?.currency ?? "XAF",
+    display_order: initial?.display_order ?? 0,
+    is_active: initial?.is_active ?? true,
+  });
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSaved({ ...(initial?.id ? { id: initial.id } : {}), ...form });
+      }}
+      className="mt-4 grid gap-3 rounded-2xl border border-gold/40 bg-card/60 p-5 sm:grid-cols-2"
+    >
+      <div className="flex items-center justify-between sm:col-span-2">
+        <h3 className="font-display text-lg font-bold">
+          {initial ? "Modifier le pack" : "Nouveau pack"}
+        </h3>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg p-1 text-muted-foreground hover:bg-muted"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <Field label="Libellé">
+        <input
+          required
+          value={form.label}
+          onChange={(e) => setForm({ ...form, label: e.target.value })}
+          placeholder="ex: Pack Champion"
+          className="w-full rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm"
+        />
+      </Field>
+
+      <Field label="Position">
+        <input
+          type="number"
+          min={0}
+          value={form.display_order}
+          onChange={(e) => setForm({ ...form, display_order: Number(e.target.value) })}
+          className="w-full rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm"
+        />
+      </Field>
+
+      <Field label="Nombre de votes">
+        <input
+          type="number"
+          required
+          min={1}
+          value={form.votes}
+          onChange={(e) => setForm({ ...form, votes: Number(e.target.value) })}
+          className="w-full rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm"
+        />
+      </Field>
+
+      <Field label="Montant (XAF)">
+        <input
+          type="number"
+          required
+          min={1}
+          value={form.amount}
+          onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
+          className="w-full rounded-xl border border-border/60 bg-background px-4 py-2.5 text-sm"
+        />
+      </Field>
+
+      <label className="inline-flex cursor-pointer items-center gap-2 text-sm sm:col-span-2">
+        <input
+          type="checkbox"
+          checked={form.is_active}
+          onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+          className="h-4 w-4"
+        />
+        Actif (proposé sur la page de paiement)
+      </label>
+
+      <button className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground sm:col-span-2">
+        {initial ? "Enregistrer" : "Créer le pack"}
+      </button>
+    </form>
   );
 }

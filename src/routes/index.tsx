@@ -12,8 +12,6 @@ import { getRanking } from "@/lib/public.functions";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { RankingList } from "@/components/ranking-list";
 import { formatNumber } from "@/lib/format";
-import heroMiss from "@/assets/hero-miss.jpg";
-import heroMaster from "@/assets/hero-master.jpg";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -92,20 +90,17 @@ function HomePage() {
             </div>
           </div>
 
-          {/* Visual */}
-          <div className="relative grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="relative aspect-[3/4] overflow-hidden rounded-3xl ring-1 ring-gold/30 ring-gold-glow">
-              <img src={heroMiss} alt="Candidate Miss" className="h-full w-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-violet/40 via-transparent" />
-              <span className="absolute left-3 top-3 rounded-full bg-magenta px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white">
-                Miss
-              </span>
-            </div>
-            <div className="relative mt-10 aspect-[3/4] overflow-hidden rounded-3xl ring-1 ring-magenta/30 ring-magenta-glow">
-              <img src={heroMaster} alt="Candidate Master" className="h-full w-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-violet/40 via-transparent" />
-              <span className="absolute left-3 top-3 rounded-full bg-gold px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary-foreground">
-                Master
+          {/* Visual — group photo */}
+          <div className="relative">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-3xl ring-1 ring-gold/30 ring-gold-glow">
+              <img
+                src="/hero-group.jpeg"
+                alt="Candidates Miss Journées Gestion"
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-violet/30 via-transparent to-transparent" />
+              <span className="absolute left-4 top-4 rounded-full bg-magenta px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white">
+                Miss · Édition 2026
               </span>
             </div>
           </div>

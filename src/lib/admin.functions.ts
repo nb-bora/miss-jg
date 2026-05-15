@@ -113,7 +113,7 @@ export const listAllCandidates = createServerFn({ method: "GET" })
     await assertAdmin(context.userId);
     const { data, error } = await supabaseAdmin
       .from("candidates")
-      .select("id, name, slug, category, is_active, display_order, photo_url")
+      .select("id, name, slug, category, bio, is_active, display_order, photo_url")
       .order("display_order");
     if (error) throw new Error(error.message);
     return data ?? [];
@@ -134,18 +134,22 @@ export const upsertCandidate = createServerFn({ method: "POST" })
           .regex(/^[a-z0-9-]+$/, "Slug : minuscules, chiffres et tirets uniquement"),
         category: z.enum(["miss", "master"]),
         bio: z.string().trim().max(2000).optional().nullable(),
-        photo_url: z.string().trim().max(500).url().optional().nullable(),
+        photo_url: z.string().trim().max(500).optional().nullable(),
+        display_order: z.number().int().min(0).max(9999).optional(),
         is_active: z.boolean().optional(),
       })
       .parse(d),
   )
   .handler(async ({ context, data }) => {
     await assertAdmin(context.userId);
-    if (data.id) {
-      const { error } = await supabaseAdmin.from("candidates").update(data).eq("id", data.id);
+    const { id, ...payload } = data;
+    if (id) {
+      const { error } = await supabaseAdmin.from("candidates").update(payload).eq("id", id);
       if (error) throw new Error(error.message);
     } else {
-      const { error } = await supabaseAdmin.from("candidates").insert(data);
+      const { error } = await supabaseAdmin
+        .from("candidates")
+        .insert(payload as typeof payload & { name: string; slug: string });
       if (error) throw new Error(error.message);
     }
     return { ok: true };
@@ -160,6 +164,95 @@ export const setCandidateActive = createServerFn({ method: "POST" })
       .from("candidates")
       .update({ is_active: data.is_active })
       .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteCandidate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.userId);
+    const { error } = await supabaseAdmin.from("candidates").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Upload photo (base64) → storage bucket → returns public URL */
+export const uploadCandidatePhoto = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        filename: z.string().min(1).max(120),
+        contentType: z.string().min(1).max(100),
+        base64: z.string().min(10),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.userId);
+    const buffer = Buffer.from(data.base64, "base64");
+    const ext = (data.filename.split(".").pop() ?? "jpg").toLowerCase();
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabaseAdmin.storage
+      .from("candidate-photos")
+      .upload(path, buffer, { contentType: data.contentType, upsert: false });
+    if (error) throw new Error(error.message);
+    const { data: pub } = supabaseAdmin.storage.from("candidate-photos").getPublicUrl(path);
+    return { url: pub.publicUrl };
+  });
+
+// ===== Vote packages =====
+
+export const listAllPackages = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const { data, error } = await supabaseAdmin
+      .from("vote_packages")
+      .select("id, label, amount, votes, currency, is_active, display_order")
+      .order("display_order");
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const upsertPackage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        id: z.string().uuid().optional(),
+        label: z.string().trim().min(1).max(80),
+        amount: z.number().int().min(1).max(10_000_000),
+        votes: z.number().int().min(1).max(100_000),
+        currency: z.string().trim().min(2).max(8).default("XAF"),
+        display_order: z.number().int().min(0).max(9999).optional(),
+        is_active: z.boolean().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.userId);
+    const { id, ...payload } = data;
+    if (id) {
+      const { error } = await supabaseAdmin.from("vote_packages").update(payload).eq("id", id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await supabaseAdmin
+        .from("vote_packages")
+        .insert(payload as typeof payload & { label: string; amount: number; votes: number });
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+export const deletePackage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.userId);
+    const { error } = await supabaseAdmin.from("vote_packages").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

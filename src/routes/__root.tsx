@@ -58,13 +58,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Miss JG" },
+      { title: "Miss-Mister Journées Gestion 2026" },
       {
         name: "description",
         content:
-          "Plateforme officielle de vote payant pour le concours Miss & Master. Soutenez votre candidat préféré, chaque vote compte.",
+          "Plateforme officielle de vote payant pour Miss-Mister Journées Gestion. Soutenez votre candidate préférée — chaque vote compte.",
       },
-      { property: "og:title", content: "Miss JG" },
+      { property: "og:title", content: "Miss-Mister Journées Gestion 2026" },
       { property: "og:description", content: "A modern, secure, and responsive web platform for managing, monetizing, and live voting in “Miss & Master” style competitions." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

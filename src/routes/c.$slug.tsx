@@ -50,7 +50,7 @@ function CandidatePage() {
         <nav className="flex items-center gap-2 text-xs text-muted-foreground">
           <Link to="/" className="hover:text-foreground">Accueil</Link>
           <span>/</span>
-          <Link to="/classement" className="hover:text-foreground">Candidats</Link>
+          <Link to="/classement" className="hover:text-foreground">Classement</Link>
           <span>/</span>
           <span className="text-foreground">{c.name}</span>
         </nav>

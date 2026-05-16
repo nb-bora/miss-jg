@@ -15,7 +15,7 @@ export const createVoteIntent = createServerFn({ method: "POST" })
     z
       .object({
         candidate_slug: z.string().min(1).max(100),
-        package_id: z.string().uuid(),
+        vote_count: z.number().int().min(1).max(10000),
         buyer_name: z.string().trim().min(1).max(120).optional(),
         buyer_contact: z.string().trim().min(3).max(120).optional(),
       })
@@ -29,12 +29,8 @@ export const createVoteIntent = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!candidate || !candidate.is_active) throw new Error("Candidat introuvable");
 
-    const { data: pkg } = await supabaseAdmin
-      .from("vote_packages")
-      .select("id, amount, votes, currency, is_active")
-      .eq("id", data.package_id)
-      .maybeSingle();
-    if (!pkg || !pkg.is_active) throw new Error("Pack invalide");
+    const UNIT_PRICE = 100;
+    const amount = data.vote_count * UNIT_PRICE;
 
     const provider = "manual";
     const provider_ref = `mv_${crypto.randomUUID()}`;
@@ -43,10 +39,10 @@ export const createVoteIntent = createServerFn({ method: "POST" })
       .from("vote_transactions")
       .insert({
         candidate_id: candidate.id,
-        package_id: pkg.id,
-        amount: pkg.amount,
-        currency: pkg.currency,
-        vote_count: pkg.votes,
+        package_id: null,
+        amount,
+        currency: "XAF",
+        vote_count: data.vote_count,
         provider,
         provider_ref,
         payment_status: "pending",

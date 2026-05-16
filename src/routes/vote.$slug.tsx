@@ -2,8 +2,8 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowLeft, Check, Loader2, ShieldCheck } from "lucide-react";
-import { getCandidate, getVotePackages } from "@/lib/public.functions";
+import { ArrowLeft, Loader2, ShieldCheck, Minus, Plus } from "lucide-react";
+import { getCandidate } from "@/lib/public.functions";
 import { createVoteIntent } from "@/lib/payment.functions";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { formatXAF } from "@/lib/format";
@@ -13,40 +13,49 @@ export const Route = createFileRoute("/vote/$slug")({
   component: VotePage,
 });
 
+const UNIT_PRICE = 100;
+const QUICK_AMOUNTS = [100, 500, 1000, 2000, 5000, 10000];
+
 function VotePage() {
   const { slug } = Route.useParams();
   const navigate = useNavigate();
   const fetchCandidate = useServerFn(getCandidate);
-  const fetchPackages = useServerFn(getVotePackages);
   const submit = useServerFn(createVoteIntent);
 
-  const { data: c } = useQuery({ queryKey: ["candidate", slug], queryFn: () => fetchCandidate({ data: { slug } }) });
-  const { data: packages } = useQuery({ queryKey: ["packages"], queryFn: () => fetchPackages() });
+  const { data: c } = useQuery({
+    queryKey: ["candidate", slug],
+    queryFn: () => fetchCandidate({ data: { slug } }),
+  });
 
-  const [selected, setSelected] = useState<string | null>(null);
+  const [amount, setAmount] = useState<number>(500);
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
 
+  const voteCount = Math.max(1, Math.floor(amount / UNIT_PRICE));
+  const totalAmount = voteCount * UNIT_PRICE;
+
+  const setSafeAmount = (val: number) => {
+    if (!Number.isFinite(val)) return;
+    const snapped = Math.max(UNIT_PRICE, Math.round(val / UNIT_PRICE) * UNIT_PRICE);
+    setAmount(Math.min(snapped, 1_000_000));
+  };
+
   const mutation = useMutation({
-    mutationFn: async () => {
-      if (!selected) throw new Error("Choisissez un pack");
-      return submit({
+    mutationFn: async () =>
+      submit({
         data: {
           candidate_slug: slug,
-          package_id: selected,
+          vote_count: voteCount,
           buyer_name: name || undefined,
           buyer_contact: contact || undefined,
         },
-      });
-    },
+      }),
     onSuccess: (res) => {
       toast.success("Redirection vers le paiement…");
       navigate({ to: res.redirect_url });
     },
     onError: (e: Error) => toast.error(e.message),
   });
-
-  const pkg = packages?.find((p) => p.id === selected);
 
   return (
     <div className="min-h-screen bg-background">
@@ -70,43 +79,69 @@ function VotePage() {
           </div>
         </div>
 
-        {/* Packages */}
-        <h2 className="mt-10 font-display text-lg font-semibold">1. Choisissez votre pack</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {(packages ?? []).map((p) => {
-            const active = selected === p.id;
-            return (
+        {/* Amount selector */}
+        <h2 className="mt-10 font-display text-lg font-semibold">
+          1. Combien de votes ?
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          1 vote = {formatXAF(UNIT_PRICE)}. Choisissez le montant que vous souhaitez engager.
+        </p>
+
+        <div className="mt-4 rounded-2xl border border-border/60 bg-card/60 p-6">
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={() => setSafeAmount(amount - UNIT_PRICE)}
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-border/60 hover:border-gold"
+              aria-label="Diminuer"
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+            <div className="flex items-baseline gap-2">
+              <input
+                type="number"
+                min={UNIT_PRICE}
+                step={UNIT_PRICE}
+                value={amount}
+                onChange={(e) => setSafeAmount(Number(e.target.value))}
+                className="w-40 bg-transparent text-center font-display text-4xl font-bold text-gold outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+              <span className="font-display text-lg font-semibold text-muted-foreground">FCFA</span>
+            </div>
+            <button
+              onClick={() => setSafeAmount(amount + UNIT_PRICE)}
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-border/60 hover:border-gold"
+              aria-label="Augmenter"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+
+          <p className="mt-3 text-center text-sm text-muted-foreground">
+            = <span className="font-semibold text-foreground">{voteCount}</span> vote
+            {voteCount > 1 ? "s" : ""}
+          </p>
+
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            {QUICK_AMOUNTS.map((q) => (
               <button
-                key={p.id}
-                onClick={() => setSelected(p.id)}
-                className={`relative flex items-center justify-between rounded-2xl border p-5 text-left transition ${
-                  active
-                    ? "border-gold bg-gold/10 ring-gold-glow"
-                    : "border-border/60 bg-card/60 hover:border-gold/40"
+                key={q}
+                onClick={() => setSafeAmount(q)}
+                className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                  amount === q
+                    ? "border-gold bg-gold/10 text-gold"
+                    : "border-border/60 hover:border-gold/60"
                 }`}
               >
-                <div>
-                  <p className="font-display text-lg font-bold">{p.label}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {p.votes} vote{p.votes > 1 ? "s" : ""}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-display text-2xl font-bold text-gold">
-                    {formatXAF(p.amount)}
-                  </p>
-                </div>
-                {active && (
-                  <Check className="absolute right-3 top-3 h-4 w-4 text-gold" />
-                )}
+                {formatXAF(q)}
               </button>
-            );
-          })}
+            ))}
+          </div>
         </div>
 
         {/* Buyer */}
         <h2 className="mt-10 font-display text-lg font-semibold">
-          2. Vos coordonnées <span className="text-sm font-normal text-muted-foreground">(optionnel)</span>
+          2. Vos coordonnées{" "}
+          <span className="text-sm font-normal text-muted-foreground">(optionnel)</span>
         </h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <input
@@ -130,18 +165,14 @@ function VotePage() {
           <h3 className="font-display text-lg font-semibold">Récapitulatif</h3>
           <dl className="mt-4 space-y-2 text-sm">
             <Row label="Candidat" value={c?.name ?? "—"} />
-            <Row label="Pack" value={pkg?.label ?? "—"} />
-            <Row label="Votes" value={pkg ? `${pkg.votes}` : "—"} />
+            <Row label="Prix unitaire" value={formatXAF(UNIT_PRICE)} />
+            <Row label="Votes" value={String(voteCount)} />
             <div className="my-3 border-t border-border/60" />
-            <Row
-              label="Total à payer"
-              value={pkg ? formatXAF(pkg.amount) : "—"}
-              highlight
-            />
+            <Row label="Total à payer" value={formatXAF(totalAmount)} highlight />
           </dl>
 
           <button
-            disabled={!selected || mutation.isPending}
+            disabled={mutation.isPending || voteCount < 1}
             onClick={() => mutation.mutate()}
             className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-8 py-4 font-display text-lg font-bold text-primary-foreground transition hover:ring-gold-glow disabled:cursor-not-allowed disabled:opacity-40"
           >

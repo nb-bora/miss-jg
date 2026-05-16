@@ -14,7 +14,9 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as VoteSlugRouteImport } from './routes/vote.$slug'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
-import { Route as VoteConfirmRefRouteImport } from './routes/vote.confirm.$ref'
+import { Route as VoteSuccessRefRouteImport } from './routes/vote.success.$ref'
+import { Route as VoteEchecRefRouteImport } from './routes/vote.echec.$ref'
+import { Route as VoteAttenteRefRouteImport } from './routes/vote.attente.$ref'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments.webhook'
 
 const ClassementRoute = ClassementRouteImport.update({
@@ -42,9 +44,19 @@ const CSlugRoute = CSlugRouteImport.update({
   path: '/c/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const VoteConfirmRefRoute = VoteConfirmRefRouteImport.update({
-  id: '/vote/confirm/$ref',
-  path: '/vote/confirm/$ref',
+const VoteSuccessRefRoute = VoteSuccessRefRouteImport.update({
+  id: '/vote/success/$ref',
+  path: '/vote/success/$ref',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VoteEchecRefRoute = VoteEchecRefRouteImport.update({
+  id: '/vote/echec/$ref',
+  path: '/vote/echec/$ref',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VoteAttenteRefRoute = VoteAttenteRefRouteImport.update({
+  id: '/vote/attente/$ref',
+  path: '/vote/attente/$ref',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicPaymentsWebhookRoute =
@@ -60,7 +72,9 @@ export interface FileRoutesByFullPath {
   '/classement': typeof ClassementRoute
   '/c/$slug': typeof CSlugRoute
   '/vote/$slug': typeof VoteSlugRoute
-  '/vote/confirm/$ref': typeof VoteConfirmRefRoute
+  '/vote/attente/$ref': typeof VoteAttenteRefRoute
+  '/vote/echec/$ref': typeof VoteEchecRefRoute
+  '/vote/success/$ref': typeof VoteSuccessRefRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -69,7 +83,9 @@ export interface FileRoutesByTo {
   '/classement': typeof ClassementRoute
   '/c/$slug': typeof CSlugRoute
   '/vote/$slug': typeof VoteSlugRoute
-  '/vote/confirm/$ref': typeof VoteConfirmRefRoute
+  '/vote/attente/$ref': typeof VoteAttenteRefRoute
+  '/vote/echec/$ref': typeof VoteEchecRefRoute
+  '/vote/success/$ref': typeof VoteSuccessRefRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -79,7 +95,9 @@ export interface FileRoutesById {
   '/classement': typeof ClassementRoute
   '/c/$slug': typeof CSlugRoute
   '/vote/$slug': typeof VoteSlugRoute
-  '/vote/confirm/$ref': typeof VoteConfirmRefRoute
+  '/vote/attente/$ref': typeof VoteAttenteRefRoute
+  '/vote/echec/$ref': typeof VoteEchecRefRoute
+  '/vote/success/$ref': typeof VoteSuccessRefRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -90,7 +108,9 @@ export interface FileRouteTypes {
     | '/classement'
     | '/c/$slug'
     | '/vote/$slug'
-    | '/vote/confirm/$ref'
+    | '/vote/attente/$ref'
+    | '/vote/echec/$ref'
+    | '/vote/success/$ref'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,7 +119,9 @@ export interface FileRouteTypes {
     | '/classement'
     | '/c/$slug'
     | '/vote/$slug'
-    | '/vote/confirm/$ref'
+    | '/vote/attente/$ref'
+    | '/vote/echec/$ref'
+    | '/vote/success/$ref'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -108,7 +130,9 @@ export interface FileRouteTypes {
     | '/classement'
     | '/c/$slug'
     | '/vote/$slug'
-    | '/vote/confirm/$ref'
+    | '/vote/attente/$ref'
+    | '/vote/echec/$ref'
+    | '/vote/success/$ref'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -118,7 +142,9 @@ export interface RootRouteChildren {
   ClassementRoute: typeof ClassementRoute
   CSlugRoute: typeof CSlugRoute
   VoteSlugRoute: typeof VoteSlugRoute
-  VoteConfirmRefRoute: typeof VoteConfirmRefRoute
+  VoteAttenteRefRoute: typeof VoteAttenteRefRoute
+  VoteEchecRefRoute: typeof VoteEchecRefRoute
+  VoteSuccessRefRoute: typeof VoteSuccessRefRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -159,11 +185,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/vote/confirm/$ref': {
-      id: '/vote/confirm/$ref'
-      path: '/vote/confirm/$ref'
-      fullPath: '/vote/confirm/$ref'
-      preLoaderRoute: typeof VoteConfirmRefRouteImport
+    '/vote/success/$ref': {
+      id: '/vote/success/$ref'
+      path: '/vote/success/$ref'
+      fullPath: '/vote/success/$ref'
+      preLoaderRoute: typeof VoteSuccessRefRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vote/echec/$ref': {
+      id: '/vote/echec/$ref'
+      path: '/vote/echec/$ref'
+      fullPath: '/vote/echec/$ref'
+      preLoaderRoute: typeof VoteEchecRefRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vote/attente/$ref': {
+      id: '/vote/attente/$ref'
+      path: '/vote/attente/$ref'
+      fullPath: '/vote/attente/$ref'
+      preLoaderRoute: typeof VoteAttenteRefRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/payments/webhook': {
@@ -182,9 +222,21 @@ const rootRouteChildren: RootRouteChildren = {
   ClassementRoute: ClassementRoute,
   CSlugRoute: CSlugRoute,
   VoteSlugRoute: VoteSlugRoute,
-  VoteConfirmRefRoute: VoteConfirmRefRoute,
+  VoteAttenteRefRoute: VoteAttenteRefRoute,
+  VoteEchecRefRoute: VoteEchecRefRoute,
+  VoteSuccessRefRoute: VoteSuccessRefRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

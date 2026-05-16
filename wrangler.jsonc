@@ -4,4 +4,5 @@
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/server.ts",
+  // Secrets (wrangler secret put): EASYTRANSACT_*, PAYMENT_WEBHOOK_SECRET, SUPABASE_SERVICE_ROLE_KEY, APP_BASE_URL
 }

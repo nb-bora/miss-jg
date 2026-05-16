@@ -1,7 +1,17 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { ensureDefaultAdmin } from "@/lib/admin-seed";
 import { z } from "zod";
+
+const txFiltersSchema = z.object({
+  status: z.enum(["all", "paid", "pending", "failed", "refunded"]).optional(),
+  operator: z.enum(["all", "orange", "mtn"]).optional(),
+  candidate_id: z.string().uuid().optional(),
+  search: z.string().trim().max(120).optional(),
+  date_from: z.string().optional(),
+  date_to: z.string().optional(),
+});
 
 async function assertAdmin(userId: string) {
   const { data } = await supabaseAdmin
@@ -12,6 +22,12 @@ async function assertAdmin(userId: string) {
     .maybeSingle();
   if (!data) throw new Error("Accès refusé : admin requis");
 }
+
+/** Provisionne l'admin par défaut (serveur uniquement, nécessite service_role). */
+export const provisionDefaultAdmin = createServerFn({ method: "POST" }).handler(async () => {
+  const result = await ensureDefaultAdmin();
+  return result;
+});
 
 export const adminBootstrap = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -50,10 +66,14 @@ export const getDashboard = createServerFn({ method: "GET" })
 
     const all = txs ?? [];
     const paid = all.filter((t) => t.payment_status === "paid");
+    const pending = all.filter((t) => t.payment_status === "pending");
+    const failed = all.filter((t) => t.payment_status === "failed");
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayCount = all.filter((t) => new Date(t.created_at) >= today).length;
-    const successRate = all.length ? (paid.length / all.length) * 100 : 0;
+    const todayTxs = all.filter((t) => new Date(t.created_at) >= today);
+    const todayPaid = todayTxs.filter((t) => t.payment_status === "paid");
+    const finalized = paid.length + failed.length;
+    const successRate = finalized > 0 ? (paid.length / finalized) * 100 : 0;
 
     const { count: candidatesCount } = await supabaseAdmin
       .from("candidates")
@@ -68,8 +88,13 @@ export const getDashboard = createServerFn({ method: "GET" })
     return {
       totalCollected: paid.reduce((a, t) => a + (t.amount ?? 0), 0),
       totalVotes: paid.reduce((a, t) => a + (t.vote_count ?? 0), 0),
+      pendingCount: pending.length,
+      pendingAmount: pending.reduce((a, t) => a + (t.amount ?? 0), 0),
+      failedCount: failed.length,
       avgBasket: paid.length ? Math.round(paid.reduce((a, t) => a + (t.amount ?? 0), 0) / paid.length) : 0,
-      txToday: todayCount,
+      txToday: todayTxs.length,
+      collectedToday: todayPaid.reduce((a, t) => a + (t.amount ?? 0), 0),
+      votesToday: todayPaid.reduce((a, t) => a + (t.vote_count ?? 0), 0),
       successRate: Math.round(successRate * 10) / 10,
       candidatesCount: candidatesCount ?? 0,
       top: (top ?? []).map((t) => ({
@@ -83,28 +108,51 @@ export const getDashboard = createServerFn({ method: "GET" })
 
 export const listTransactions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    z.object({ status: z.enum(["all", "paid", "pending", "failed"]).optional() }).parse(d ?? {}),
-  )
+  .inputValidator((d) => txFiltersSchema.parse(d ?? {}))
   .handler(async ({ context, data }) => {
     await assertAdmin(context.userId);
     let q = supabaseAdmin
       .from("vote_transactions")
-      .select("id, amount, currency, vote_count, provider, provider_ref, payment_status, buyer_name, buyer_contact, created_at, paid_at, candidate_id")
+      .select(
+        "id, amount, currency, vote_count, provider, provider_ref, payment_status, buyer_name, buyer_contact, created_at, paid_at, candidate_id, operator, metadata",
+      )
       .order("created_at", { ascending: false })
-      .limit(200);
+      .limit(500);
+
     if (data.status && data.status !== "all") q = q.eq("payment_status", data.status);
+    if (data.operator && data.operator !== "all") q = q.eq("operator", data.operator);
+    if (data.candidate_id) q = q.eq("candidate_id", data.candidate_id);
+    if (data.date_from) q = q.gte("created_at", `${data.date_from}T00:00:00.000Z`);
+    if (data.date_to) q = q.lte("created_at", `${data.date_to}T23:59:59.999Z`);
+    if (data.search) q = q.ilike("provider_ref", `%${data.search}%`);
+
     const { data: txs, error } = await q;
     if (error) throw new Error(error.message);
 
-    const ids = Array.from(new Set((txs ?? []).map((t) => t.candidate_id)));
-    const { data: cands } = await supabaseAdmin.from("candidates").select("id, name, slug").in("id", ids);
+    const rows = txs ?? [];
+    const ids = Array.from(new Set(rows.map((t) => t.candidate_id)));
+    const { data: cands } =
+      ids.length > 0
+        ? await supabaseAdmin.from("candidates").select("id, name, slug").in("id", ids)
+        : { data: [] as { id: string; name: string; slug: string }[] };
     const map = new Map((cands ?? []).map((c) => [c.id, c]));
-    return (txs ?? []).map((t) => ({
+
+    const items = rows.map((t) => ({
       ...t,
       candidate_name: map.get(t.candidate_id)?.name ?? "—",
       candidate_slug: map.get(t.candidate_id)?.slug ?? "",
     }));
+
+    const paidRows = items.filter((t) => t.payment_status === "paid");
+    const stats = {
+      count: items.length,
+      totalAmount: items.reduce((a, t) => a + (t.amount ?? 0), 0),
+      totalVotes: items.reduce((a, t) => a + (t.vote_count ?? 0), 0),
+      collectedAmount: paidRows.reduce((a, t) => a + (t.amount ?? 0), 0),
+      validatedVotes: paidRows.reduce((a, t) => a + (t.vote_count ?? 0), 0),
+    };
+
+    return { items, stats };
   });
 
 export const listAllCandidates = createServerFn({ method: "GET" })

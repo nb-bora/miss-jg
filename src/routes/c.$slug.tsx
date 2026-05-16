@@ -128,7 +128,7 @@ function CandidatePage() {
 
             {c.bio && (
               <div className="mt-6 rounded-2xl border border-border/60 bg-card/50 p-5">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-rose">
                   À propos de {c.name.split(" ")[0]}
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{c.bio}</p>
@@ -139,9 +139,9 @@ function CandidatePage() {
             <Link
               to="/vote/$slug"
               params={{ slug: c.slug }}
-              className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-br from-gold to-[oklch(0.72_0.16_70)] px-8 py-4 font-display text-lg font-bold text-primary-foreground shadow-[0_16px_40px_-12px_oklch(0.82_0.13_85_/_0.55)] transition hover:scale-[1.02]"
+              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-rose px-8 py-4 font-display text-lg font-bold text-white shadow-rose-glow transition hover:opacity-95 sm:w-auto"
             >
-              <TrendingUp className="h-5 w-5" /> Voter maintenant
+              <TrendingUp className="h-5 w-5" /> Choisir cette candidate
             </Link>
 
             {/* Share */}

@@ -113,6 +113,50 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          new_status: Database["public"]["Enums"]["payment_status"] | null
+          payload: Json
+          previous_status: Database["public"]["Enums"]["payment_status"] | null
+          provider_ref: string
+          source: string
+          transaction_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          new_status?: Database["public"]["Enums"]["payment_status"] | null
+          payload?: Json
+          previous_status?: Database["public"]["Enums"]["payment_status"] | null
+          provider_ref: string
+          source: string
+          transaction_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          new_status?: Database["public"]["Enums"]["payment_status"] | null
+          payload?: Json
+          previous_status?: Database["public"]["Enums"]["payment_status"] | null
+          provider_ref?: string
+          source?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_events_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "vote_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vote_transactions: {
         Row: {
           amount: number
@@ -123,6 +167,7 @@ export type Database = {
           currency: string
           id: string
           metadata: Json
+          operator: string | null
           package_id: string | null
           paid_at: string | null
           payment_status: Database["public"]["Enums"]["payment_status"]
@@ -139,6 +184,7 @@ export type Database = {
           currency?: string
           id?: string
           metadata?: Json
+          operator?: string | null
           package_id?: string | null
           paid_at?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
@@ -155,6 +201,7 @@ export type Database = {
           currency?: string
           id?: string
           metadata?: Json
+          operator?: string | null
           package_id?: string | null
           paid_at?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]

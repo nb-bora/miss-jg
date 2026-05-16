@@ -37,8 +37,11 @@
   --color-gold: var(--gold);
   --color-magenta: var(--magenta);
   --color-violet: var(--violet);
+  --color-rose: var(--rose);
 
   --shadow-glow: 0 20px 60px -20px color-mix(in oklab, var(--gold) 45%, transparent);
+  --shadow-rose: 0 20px 50px -15px color-mix(in oklab, var(--rose) 50%, transparent);
+  --shadow-rose-glow: var(--shadow-rose);
   --shadow-magenta: 0 20px 60px -20px color-mix(in oklab, var(--magenta) 55%, transparent);
   --shadow-violet: 0 30px 80px -20px color-mix(in oklab, var(--violet) 60%, transparent);
 }
@@ -79,15 +82,16 @@
 }
 
 .dark, :root.dark {
-  --background: oklch(0.13 0.025 275);
+  --rose: oklch(0.62 0.22 15);
+  --background: oklch(0.1 0.025 15);
   --foreground: oklch(0.97 0.01 90);
-  --violet: oklch(0.6 0.22 305);
-  --card: oklch(0.17 0.025 275);
+  --violet: oklch(0.55 0.2 305);
+  --card: oklch(0.16 0.02 15);
   --card-foreground: oklch(0.97 0.01 90);
   --popover: oklch(0.16 0.015 270);
   --popover-foreground: oklch(0.97 0.01 90);
-  --primary: oklch(0.82 0.13 85);
-  --primary-foreground: oklch(0.15 0.015 270);
+  --primary: var(--rose);
+  --primary-foreground: oklch(0.99 0.005 90);
   --gold: oklch(0.82 0.13 85);
   --accent: oklch(0.65 0.27 350);
   --accent-foreground: oklch(0.98 0.005 90);
@@ -98,20 +102,21 @@
   --muted-foreground: oklch(0.68 0.02 90);
   --border: oklch(0.28 0.02 270);
   --input: oklch(0.22 0.02 270);
-  --ring: oklch(0.82 0.13 85);
+  --ring: var(--rose);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --background: oklch(0.13 0.025 275);
+    --rose: oklch(0.62 0.22 15);
+    --background: oklch(0.1 0.025 15);
     --foreground: oklch(0.97 0.01 90);
     --violet: oklch(0.6 0.22 305);
     --card: oklch(0.17 0.025 275);
     --card-foreground: oklch(0.97 0.01 90);
     --popover: oklch(0.16 0.015 270);
     --popover-foreground: oklch(0.97 0.01 90);
-    --primary: oklch(0.82 0.13 85);
-    --primary-foreground: oklch(0.15 0.015 270);
+    --primary: var(--rose);
+    --primary-foreground: oklch(0.99 0.005 90);
     --gold: oklch(0.82 0.13 85);
     --accent: oklch(0.65 0.27 350);
     --accent-foreground: oklch(0.98 0.005 90);
@@ -122,7 +127,7 @@
     --muted-foreground: oklch(0.68 0.02 90);
     --border: oklch(0.28 0.02 270);
     --input: oklch(0.22 0.02 270);
-    --ring: oklch(0.82 0.13 85);
+    --ring: var(--rose);
   }
 }
 
@@ -135,7 +140,7 @@
     -webkit-font-smoothing: antialiased;
   }
   h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing: -0.02em; }
-  ::selection { background: var(--magenta); color: white; }
+  ::selection { background: var(--rose, var(--magenta)); color: white; }
 }
 
 @layer utilities {
@@ -160,11 +165,52 @@
   .ring-gold-glow { box-shadow: var(--shadow-glow); }
   .ring-magenta-glow { box-shadow: var(--shadow-magenta); }
   .ring-violet-glow { box-shadow: var(--shadow-violet); }
+  .shadow-rose-glow { box-shadow: var(--shadow-rose); }
+  .ring-rose-glow { box-shadow: var(--shadow-rose); }
+  .bg-ucac-gradient {
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 0%, oklch(0.35 0.12 15 / 0.5) 0%, transparent 55%),
+      linear-gradient(180deg, oklch(0.14 0.04 15), oklch(0.08 0.02 275));
+  }
   .gold-divider {
     background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--gold) 60%, transparent), transparent);
     height: 1px;
   }
+  .btn-rose {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    background-color: var(--color-rose);
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: white;
+    box-shadow: var(--shadow-rose);
+    transition: opacity 0.2s;
+  }
+  .btn-rose:hover { opacity: 0.95; }
+  .btn-rose:disabled { cursor: not-allowed; opacity: 0.4; }
+  .btn-rose-lg {
+    padding: 1rem 2rem;
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+  }
+  .filter-pill {
+    border-radius: 9999px;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-transform: capitalize;
+    transition: color 0.2s, background 0.2s;
+  }
+  .filter-pill-active {
+    background-color: var(--color-rose);
+    color: white;
+    box-shadow: var(--shadow-rose);
+  }
+  .filter-pill-inactive {
+    @apply text-muted-foreground hover:bg-card hover:text-foreground;
+  }
 }
-
-/* Google Fonts */
-@import url("https://fonts.googleapis.com/css2?family=Syne:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");

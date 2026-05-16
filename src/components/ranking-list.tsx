@@ -13,7 +13,7 @@ interface Item {
 }
 
 const RANK_STYLES: Record<number, string> = {
-  1: "bg-gradient-to-br from-gold to-[oklch(0.65_0.15_60)] text-primary-foreground",
+  1: "bg-gradient-to-br from-rose to-[oklch(0.5_0.2_15)] text-white",
   2: "bg-gradient-to-br from-[oklch(0.85_0.02_280)] to-[oklch(0.6_0.02_280)] text-primary-foreground",
   3: "bg-gradient-to-br from-[oklch(0.7_0.15_45)] to-[oklch(0.5_0.12_35)] text-white",
   4: "bg-gradient-to-br from-violet to-[oklch(0.4_0.18_300)] text-white",
@@ -37,7 +37,7 @@ export function RankingList({ items }: { items: Item[] }) {
             key={c.id}
             to="/c/$slug"
             params={{ slug: c.slug }}
-            className="group flex items-center gap-4 rounded-2xl border border-border/60 bg-card/60 p-3 transition hover:border-gold/50 hover:bg-card sm:p-4"
+            className="group flex items-center gap-4 rounded-2xl border border-border/60 bg-card/80 p-3 transition hover:border-rose/40 hover:bg-card sm:p-4"
           >
             <div
               className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-sm font-extrabold shadow-md ${

@@ -19,6 +19,9 @@ import {
   deletePackage,
 } from "@/lib/admin.functions";
 import { SiteHeader } from "@/components/site-chrome";
+import { PageLayout } from "@/components/ui/page-layout";
+import { SoftCard } from "@/components/ui/soft-card";
+import { SoftField, SoftInput, softInputClass } from "@/components/ui/soft-field";
 import { formatXAF, formatNumber, formatDate } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -45,7 +48,7 @@ function AdminPage() {
   if (loadingSession) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-gold" />
+        <Loader2 className="h-6 w-6 animate-spin text-rose" />
       </div>
     );
   }
@@ -55,8 +58,7 @@ function AdminPage() {
 }
 
 function AuthForm() {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState("nanyangbrice@gmail.com");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -64,74 +66,56 @@ function AuthForm() {
     e.preventDefault();
     setLoading(true);
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin + "/admin" },
-        });
-        if (error) throw error;
-        toast.success("Compte créé. Vérifiez votre email.");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      toast.success("Connexion réussie");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Erreur");
+      toast.error(e instanceof Error ? e.message : "Erreur de connexion");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <SiteHeader />
-      <div className="mx-auto max-w-md px-4 py-20">
-        <div className="rounded-3xl border border-border/60 bg-card/60 p-8">
-          <ShieldCheck className="h-8 w-8 text-gold" />
-          <h1 className="mt-3 font-display text-3xl font-bold">Espace Admin</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "signup"
-              ? "Créez le compte administrateur (le premier inscrit devient admin)."
-              : "Connectez-vous pour accéder au tableau de bord."}
+    <PageLayout className="max-w-md py-16" variant="gradient" showFooter={false}>
+        <SoftCard padding="lg">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose/10">
+            <ShieldCheck className="h-7 w-7 text-rose" />
+          </div>
+          <h1 className="mt-4 text-center font-display text-3xl font-bold">Espace Admin</h1>
+          <p className="mt-2 text-center text-sm text-muted-foreground">
+            Connectez-vous pour gérer les candidats, les votes et les transactions.
           </p>
 
-          <form onSubmit={submit} className="mt-6 space-y-3">
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@exemple.com"
-              className="w-full rounded-xl border border-border/60 bg-background px-4 py-3 text-sm outline-none focus:border-gold"
-            />
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mot de passe"
-              className="w-full rounded-xl border border-border/60 bg-background px-4 py-3 text-sm outline-none focus:border-gold"
-            />
-            <button
-              disabled={loading}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-semibold text-primary-foreground disabled:opacity-50"
-            >
+          <form onSubmit={submit} className="mt-8 space-y-4">
+            <SoftField label="Email">
+              <SoftInput
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="vous@exemple.com"
+              />
+            </SoftField>
+            <SoftField label="Mot de passe" hint="">
+              <SoftInput
+                type="password"
+                required
+                minLength={6}
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </SoftField>
+            <button type="submit" disabled={loading} className="btn-rose w-full disabled:opacity-50">
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              {mode === "signup" ? "Créer le compte" : "Se connecter"}
+              Se connecter
             </button>
           </form>
-
-          <button
-            onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-            className="mt-4 w-full text-center text-xs text-muted-foreground hover:text-foreground"
-          >
-            {mode === "signin" ? "Créer un compte admin" : "J'ai déjà un compte"}
-          </button>
-        </div>
-      </div>
-    </div>
+        </SoftCard>
+    </PageLayout>
   );
 }
 
@@ -148,6 +132,13 @@ function AdminConsole() {
   const pkgs = useServerFn(listAllPackages);
 
   const [tab, setTab] = useState<Tab>("dashboard");
+  const [txFilters, setTxFilters] = useState({
+    status: "all" as "all" | "paid" | "pending" | "failed",
+    operator: "all" as "all" | "orange" | "mtn",
+    search: "",
+    date_from: "",
+    date_to: "",
+  });
 
   useEffect(() => {
     bootstrap().catch(() => {});
@@ -161,8 +152,17 @@ function AdminConsole() {
     enabled: !!meQ.data?.isAdmin,
   });
   const txQ = useQuery({
-    queryKey: ["admin-tx"],
-    queryFn: () => txs({ data: {} }),
+    queryKey: ["admin-tx", txFilters],
+    queryFn: () =>
+      txs({
+        data: {
+          status: txFilters.status,
+          operator: txFilters.operator,
+          search: txFilters.search || undefined,
+          date_from: txFilters.date_from || undefined,
+          date_to: txFilters.date_to || undefined,
+        },
+      }),
     enabled: !!meQ.data?.isAdmin && tab === "transactions",
   });
   const candQ = useQuery({
@@ -184,7 +184,7 @@ function AdminConsole() {
   if (meQ.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-gold" />
+        <Loader2 className="h-6 w-6 animate-spin text-rose" />
       </div>
     );
   }
@@ -222,7 +222,7 @@ function AdminConsole() {
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-gold">Console admin</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-rose">Console admin</p>
             <h1 className="mt-1 font-display text-3xl font-bold">Tableau de bord</h1>
           </div>
           <button
@@ -252,7 +252,13 @@ function AdminConsole() {
             <DashboardView data={dashQ.data} loading={dashQ.isLoading} />
           )}
           {tab === "transactions" && (
-            <TransactionsView data={txQ.data ?? []} loading={txQ.isLoading} />
+            <TransactionsView
+              data={txQ.data?.items ?? []}
+              stats={txQ.data?.stats}
+              loading={txQ.isLoading}
+              filters={txFilters}
+              onFiltersChange={setTxFilters}
+            />
           )}
           {tab === "candidates" && (
             <CandidatesView
@@ -278,8 +284,13 @@ function AdminConsole() {
 type DashData = {
   totalCollected: number;
   totalVotes: number;
+  pendingCount: number;
+  pendingAmount: number;
+  failedCount: number;
   avgBasket: number;
   txToday: number;
+  collectedToday: number;
+  votesToday: number;
   successRate: number;
   candidatesCount: number;
   top: { name: string; slug: string; total_collected: number; total_votes: number }[];
@@ -288,16 +299,20 @@ type DashData = {
 function DashboardView({ data, loading }: { data?: DashData; loading: boolean }) {
   if (loading || !data) return <div className="h-40 animate-pulse rounded-2xl bg-card/60" />;
   const kpis = [
-    { label: "Total collecté", value: formatXAF(data.totalCollected), accent: "text-gold" },
+    { label: "Total collecté", value: formatXAF(data.totalCollected), accent: "text-rose" },
     { label: "Votes validés", value: formatNumber(data.totalVotes), accent: "text-magenta" },
-    { label: "Panier moyen", value: formatXAF(data.avgBasket), accent: "" },
+    { label: "Collecté aujourd'hui", value: formatXAF(data.collectedToday), accent: "text-rose" },
+    { label: "Votes aujourd'hui", value: formatNumber(data.votesToday), accent: "" },
+    { label: "En attente", value: `${data.pendingCount} · ${formatXAF(data.pendingAmount)}`, accent: "text-muted-foreground" },
+    { label: "Échecs", value: String(data.failedCount), accent: "text-destructive" },
+    { label: "Panier moyen (payé)", value: formatXAF(data.avgBasket), accent: "" },
     { label: "Tx aujourd'hui", value: String(data.txToday), accent: "" },
     { label: "Taux succès", value: `${data.successRate}%`, accent: "" },
     { label: "Candidats", value: String(data.candidatesCount), accent: "" },
   ];
   return (
     <div className="space-y-8">
-      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {kpis.map((k) => (
           <div key={k.label} className="rounded-2xl border border-border/60 bg-card/60 p-4">
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -323,10 +338,10 @@ function DashboardView({ data, loading }: { data?: DashData; loading: boolean })
             <tbody>
               {data.top.map((t, i) => (
                 <tr key={t.slug} className="border-t border-border/40">
-                  <td className="px-4 py-3 font-display text-gold">{i + 1}</td>
+                  <td className="px-4 py-3 font-display text-rose">{i + 1}</td>
                   <td className="px-4 py-3">{t.name}</td>
                   <td className="px-4 py-3 text-right">{formatNumber(t.total_votes)}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-gold">
+                  <td className="px-4 py-3 text-right font-semibold text-rose">
                     {formatXAF(t.total_collected)}
                   </td>
                 </tr>
@@ -343,68 +358,168 @@ type TxRow = {
   id: string;
   amount: number;
   vote_count: number;
+  provider: string;
   provider_ref: string;
   payment_status: string;
   buyer_name: string | null;
   buyer_contact: string | null;
+  operator: string | null;
   created_at: string;
+  paid_at: string | null;
   candidate_name: string;
 };
 
-function TransactionsView({ data, loading }: { data: TxRow[]; loading: boolean }) {
+type TxFilters = {
+  status: "all" | "paid" | "pending" | "failed";
+  operator: "all" | "orange" | "mtn";
+  search: string;
+  date_from: string;
+  date_to: string;
+};
+
+type TxStats = {
+  count: number;
+  totalAmount: number;
+  totalVotes: number;
+  collectedAmount: number;
+  validatedVotes: number;
+};
+
+function TransactionsView({
+  data,
+  stats,
+  loading,
+  filters,
+  onFiltersChange,
+}: {
+  data: TxRow[];
+  stats?: TxStats;
+  loading: boolean;
+  filters: TxFilters;
+  onFiltersChange: (f: TxFilters) => void;
+}) {
   if (loading) return <div className="h-40 animate-pulse rounded-2xl bg-card/60" />;
+
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border/60">
-      <table className="w-full text-sm">
-        <thead className="bg-card/60 text-xs uppercase tracking-wider text-muted-foreground">
-          <tr>
-            <th className="px-4 py-3 text-left">Date</th>
-            <th className="px-4 py-3 text-left">Candidat</th>
-            <th className="px-4 py-3 text-left">Référence</th>
-            <th className="px-4 py-3 text-left">Acheteur</th>
-            <th className="px-4 py-3 text-right">Votes</th>
-            <th className="px-4 py-3 text-right">Montant</th>
-            <th className="px-4 py-3 text-left">Statut</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.length === 0 ? (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2 rounded-2xl border border-border/60 bg-card/40 p-3">
+        <select
+          value={filters.status}
+          onChange={(e) =>
+            onFiltersChange({ ...filters, status: e.target.value as TxFilters["status"] })
+          }
+          className={softInputClass + " w-auto min-w-[8rem]"}
+        >
+          <option value="all">Tous statuts</option>
+          <option value="paid">Payé</option>
+          <option value="pending">En attente</option>
+          <option value="failed">Échoué</option>
+        </select>
+        <select
+          value={filters.operator}
+          onChange={(e) =>
+            onFiltersChange({ ...filters, operator: e.target.value as TxFilters["operator"] })
+          }
+          className={softInputClass + " w-auto min-w-[8rem]"}
+        >
+          <option value="all">Tous opérateurs</option>
+          <option value="orange">Orange</option>
+          <option value="mtn">MTN</option>
+        </select>
+        <SoftInput
+          type="search"
+          placeholder="Référence…"
+          value={filters.search}
+          onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
+          className="min-w-[10rem] flex-1"
+        />
+        <SoftInput
+          type="date"
+          value={filters.date_from}
+          onChange={(e) => onFiltersChange({ ...filters, date_from: e.target.value })}
+          className="w-auto"
+        />
+        <SoftInput
+          type="date"
+          value={filters.date_to}
+          onChange={(e) => onFiltersChange({ ...filters, date_to: e.target.value })}
+          className="w-auto"
+        />
+      </div>
+
+      {stats && (
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: "Résultats", value: String(stats.count) },
+            { label: "Montant affiché", value: formatXAF(stats.totalAmount) },
+            { label: "Collecté (payé)", value: formatXAF(stats.collectedAmount) },
+            { label: "Votes validés", value: formatNumber(stats.validatedVotes) },
+          ].map((k) => (
+            <div key={k.label} className="rounded-xl border border-border/60 bg-card/60 px-4 py-3">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{k.label}</p>
+              <p className="mt-1 font-display text-lg font-bold">{k.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="overflow-x-auto rounded-2xl border border-border/60">
+        <table className="w-full text-sm">
+          <thead className="bg-card/60 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
-              <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
-                Aucune transaction
-              </td>
+              <th className="px-4 py-3 text-left">Date</th>
+              <th className="px-4 py-3 text-left">Candidat</th>
+              <th className="px-4 py-3 text-left">Référence</th>
+              <th className="px-4 py-3 text-left">Opérateur</th>
+              <th className="px-4 py-3 text-left">Acheteur</th>
+              <th className="px-4 py-3 text-right">Votes</th>
+              <th className="px-4 py-3 text-right">Montant</th>
+              <th className="px-4 py-3 text-left">Statut</th>
             </tr>
-          ) : (
-            data.map((t) => (
-              <tr key={t.id} className="border-t border-border/40">
-                <td className="px-4 py-3 text-xs text-muted-foreground">
-                  {formatDate(t.created_at)}
-                </td>
-                <td className="px-4 py-3">{t.candidate_name}</td>
-                <td className="px-4 py-3 font-mono text-xs">{t.provider_ref}</td>
-                <td className="px-4 py-3 text-xs">
-                  {t.buyer_name ?? "—"}
-                  {t.buyer_contact && (
-                    <div className="text-muted-foreground">{t.buyer_contact}</div>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right">{t.vote_count}</td>
-                <td className="px-4 py-3 text-right font-semibold">{formatXAF(t.amount)}</td>
-                <td className="px-4 py-3">
-                  <StatusBadge status={t.payment_status} />
+          </thead>
+          <tbody>
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+                  Aucune transaction
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              data.map((t) => (
+                <tr key={t.id} className="border-t border-border/40">
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    {formatDate(t.created_at)}
+                  </td>
+                  <td className="px-4 py-3">{t.candidate_name}</td>
+                  <td className="px-4 py-3 font-mono text-xs">{t.provider_ref}</td>
+                  <td className="px-4 py-3 text-xs uppercase">
+                    {t.operator ?? "—"}
+                    <div className="text-[10px] normal-case text-muted-foreground">{t.provider}</div>
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    {t.buyer_name ?? "—"}
+                    {t.buyer_contact && (
+                      <div className="text-muted-foreground">{t.buyer_contact}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right">{t.vote_count}</td>
+                  <td className="px-4 py-3 text-right font-semibold">{formatXAF(t.amount)}</td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={t.payment_status} />
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
-    paid: "bg-gold/15 text-gold",
+    paid: "bg-rose/15 text-rose",
     pending: "bg-muted text-muted-foreground",
     failed: "bg-destructive/15 text-destructive",
     refunded: "bg-magenta/15 text-magenta",
@@ -487,7 +602,7 @@ function CandidatesView({
               key={c.id}
               className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/60 p-3"
             >
-              <span className="w-6 text-center font-display text-sm text-gold">
+              <span className="w-6 text-center font-display text-sm text-rose">
                 {c.display_order}
               </span>
               <div className="h-14 w-14 overflow-hidden rounded-lg bg-muted">
@@ -502,7 +617,7 @@ function CandidatesView({
                     className={`rounded-full px-2 py-0.5 text-[10px] uppercase ${
                       c.category === "miss"
                         ? "bg-magenta/15 text-magenta"
-                        : "bg-gold/15 text-gold"
+                        : "bg-rose/15 text-rose"
                     }`}
                   >
                     {c.category}
@@ -622,7 +737,7 @@ function CandidateForm({
   return (
     <form
       onSubmit={submit}
-      className="mt-4 grid gap-3 rounded-2xl border border-gold/40 bg-card/60 p-5 sm:grid-cols-2"
+      className="mt-4 grid gap-3 rounded-2xl border border-rose/40 bg-card/60 p-5 sm:grid-cols-2"
     >
       <div className="flex items-center justify-between sm:col-span-2">
         <h3 className="font-display text-lg font-bold">
@@ -667,7 +782,7 @@ function CandidateForm({
               type="button"
               disabled={uploading}
               onClick={() => fileRef.current?.click()}
-              className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-4 py-2 text-sm font-semibold text-gold disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-full border border-rose/40 bg-rose/10 px-4 py-2 text-sm font-semibold text-rose disabled:opacity-50"
             >
               {uploading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -867,17 +982,17 @@ function PackagesView({
               ) : (
                 data.map((p) => (
                   <tr key={p.id} className="border-t border-border/40">
-                    <td className="px-4 py-3 font-display text-gold">{p.display_order}</td>
+                    <td className="px-4 py-3 font-display text-rose">{p.display_order}</td>
                     <td className="px-4 py-3 font-semibold">{p.label}</td>
                     <td className="px-4 py-3 text-right">{p.votes}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-gold">
+                    <td className="px-4 py-3 text-right font-semibold text-rose">
                       {formatXAF(p.amount)}
                     </td>
                     <td className="px-4 py-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider ${
                           p.is_active
-                            ? "bg-gold/15 text-gold"
+                            ? "bg-rose/15 text-rose"
                             : "bg-muted text-muted-foreground"
                         }`}
                       >
@@ -941,7 +1056,7 @@ function PackageForm({
         e.preventDefault();
         onSaved({ ...(initial?.id ? { id: initial.id } : {}), ...form });
       }}
-      className="mt-4 grid gap-3 rounded-2xl border border-gold/40 bg-card/60 p-5 sm:grid-cols-2"
+      className="mt-4 grid gap-3 rounded-2xl border border-rose/40 bg-card/60 p-5 sm:grid-cols-2"
     >
       <div className="flex items-center justify-between sm:col-span-2">
         <h3 className="font-display text-lg font-bold">

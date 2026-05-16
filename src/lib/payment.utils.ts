@@ -13,7 +13,6 @@ export type Operator = z.infer<typeof operatorSchema>;
 export {
   detectCameroonMobileOperator,
   normalizeCameroonPhone,
-  operatorLabel,
   parseCameroonMobilePhone,
 };
 

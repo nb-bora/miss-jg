@@ -17,6 +17,16 @@ export {
   parseCameroonMobilePhone,
 };
 
+export function operatorLabel(op: Operator) {
+  switch (op) {
+    case "orange":
+      return "Orange Money";
+    case "mtn":
+      return "MTN Mobile Money";
+    default:
+      return op;
+  }
+}
 export const phoneSchema = z
   .string()
   .trim()

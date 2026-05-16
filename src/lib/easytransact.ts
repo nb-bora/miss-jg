@@ -74,26 +74,254 @@ function getConfig() {
   return { baseUrl, token };
 }
 
-export function getOperatorId(operator: "orange" | "mtn"): string {
+type MobileOperator = "orange" | "mtn";
+
+type OperatorRecord = {
+  id: string;
+  name?: string;
+  code?: string;
+};
+
+let operatorIdsCache: Partial<Record<MobileOperator, string>> | null = null;
+let operatorIdsPromise: Promise<Partial<Record<MobileOperator, string>>> | null = null;
+
+function readOperatorsFromJsonEnv(): Partial<Record<MobileOperator, string>> {
+  const raw = process.env.EASYTRANSACT_OPERATORS?.trim();
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const out: Partial<Record<MobileOperator, string>> = {};
+    for (const key of ["orange", "mtn"] as const) {
+      const v = parsed[key];
+      if (typeof v === "string" && v.trim()) out[key] = v.trim();
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function readOperatorsFromDedicatedEnv(): Partial<Record<MobileOperator, string>> {
+  const orange = process.env.EASYTRANSACT_OPERATOR_ORANGE?.trim();
+  const mtn = process.env.EASYTRANSACT_OPERATOR_MTN?.trim();
+  return {
+    ...(orange ? { orange } : {}),
+    ...(mtn ? { mtn } : {}),
+  };
+}
+
+function recordFromOperatorObject(o: Record<string, unknown>): OperatorRecord | null {
   const id =
+    (typeof o.id === "string" && o.id.trim()) ||
+    (typeof o.operator_id === "string" && o.operator_id.trim()) ||
+    (typeof o.uuid === "string" && o.uuid.trim()) ||
+    (typeof o.code === "string" && o.code.trim()) ||
+    (typeof o.slug === "string" && o.slug.trim());
+  if (!id) return null;
+  return {
+    id,
+    name:
+      typeof o.name === "string"
+        ? o.name
+        : typeof o.label === "string"
+          ? o.label
+          : typeof o.operator_name === "string"
+            ? o.operator_name
+            : undefined,
+    code: typeof o.code === "string" ? o.code : undefined,
+  };
+}
+
+function collectOperatorsDeep(raw: unknown, out: OperatorRecord[] = []): OperatorRecord[] {
+  if (Array.isArray(raw)) {
+    for (const item of raw) collectOperatorsDeep(item, out);
+    return out;
+  }
+  if (typeof raw !== "object" || raw === null) return out;
+
+  const o = raw as Record<string, unknown>;
+  const keys = Object.keys(o).join(" ").toLowerCase();
+  const looksLikeOperator =
+    keys.includes("operator") ||
+    ("id" in o && ("name" in o || "code" in o || "label" in o));
+
+  if (looksLikeOperator) {
+    const rec = recordFromOperatorObject(o);
+    if (rec) out.push(rec);
+  }
+
+  for (const value of Object.values(o)) {
+    if (typeof value === "object" && value !== null) collectOperatorsDeep(value, out);
+  }
+  return out;
+}
+
+function normalizeOperatorsPayload(raw: unknown): OperatorRecord[] {
+  const topList = Array.isArray(raw)
+    ? raw
+    : typeof raw === "object" && raw !== null
+      ? ((raw as Record<string, unknown>).results ??
+        (raw as Record<string, unknown>).data ??
+        (raw as Record<string, unknown>).operators ??
+        (raw as Record<string, unknown>).items ??
+        [])
+      : [];
+
+  const collected =
+    Array.isArray(topList) && topList.length
+      ? topList
+          .map((item) =>
+            typeof item === "object" && item !== null
+              ? recordFromOperatorObject(item as Record<string, unknown>)
+              : null,
+          )
+          .filter((x): x is OperatorRecord => x !== null)
+      : collectOperatorsDeep(raw);
+
+  const seen = new Set<string>();
+  return collected.filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
+
+function matchOperatorFromApiList(
+  list: OperatorRecord[],
+  operator: MobileOperator,
+): string | undefined {
+  const needles =
     operator === "orange"
-      ? process.env.EASYTRANSACT_OPERATOR_ORANGE
-      : process.env.EASYTRANSACT_OPERATOR_MTN;
-  if (!id) {
+      ? ["orange", "orange money", "orange cameroon", "orm"]
+      : ["mtn", "mtn momo", "mobile money", "momo"];
+
+  const found = list.find((item) => {
+    const hay = `${item.id} ${item.name ?? ""} ${item.code ?? ""}`.toLowerCase();
+    return needles.some((n) => hay.includes(n));
+  });
+
+  return found?.id;
+}
+
+const OPERATOR_API_PATHS = [
+  "/api/v1/partner/operators/",
+  "/api/v1/operators/",
+  "/api/v1/partner/operator/",
+  "/api/v1/partner/services/",
+  "/api/v1/partner/service/",
+] as const;
+
+function mapOperatorsList(list: OperatorRecord[]): Partial<Record<MobileOperator, string>> {
+  const mapped: Partial<Record<MobileOperator, string>> = {};
+  for (const op of ["orange", "mtn"] as const) {
+    const id = matchOperatorFromApiList(list, op);
+    if (id) mapped[op] = id;
+  }
+  return mapped;
+}
+
+/** Liste les opérateurs disponibles sur le compte partenaire (pour config prod). */
+export async function listPartnerOperators(): Promise<OperatorRecord[]> {
+  if (!isEasyTransactConfigured()) {
     throw new Error(
-      `Opérateur ${operator} non configuré (EASYTRANSACT_OPERATOR_${operator === "orange" ? "ORANGE" : "MTN"})`,
+      "EASYTRANSACT_API_URL et EASYTRANSACT_API_TOKEN sont requis. Ajoutez la clé sk_live_… du dashboard Easy Transact dans Vercel.",
     );
   }
-  return id;
+
+  const merged: OperatorRecord[] = [];
+  const seen = new Set<string>();
+
+  for (const path of OPERATOR_API_PATHS) {
+    try {
+      const raw = await easyTransactFetch<unknown>(path);
+      for (const item of normalizeOperatorsPayload(raw)) {
+        if (seen.has(item.id)) continue;
+        seen.add(item.id);
+        merged.push(item);
+      }
+    } catch {
+      /* endpoint optionnel */
+    }
+  }
+
+  return merged;
+}
+
+async function fetchOperatorsFromApi(): Promise<Partial<Record<MobileOperator, string>>> {
+  const list = await listPartnerOperators();
+  if (!list.length) return {};
+
+  const mapped = mapOperatorsList(list);
+  if (mapped.orange && mapped.mtn) return mapped;
+
+  return mapped;
+}
+
+export function clearOperatorIdsCache() {
+  operatorIdsCache = null;
+  operatorIdsPromise = null;
+}
+
+async function loadOperatorIds(): Promise<Partial<Record<MobileOperator, string>>> {
+  const merged: Partial<Record<MobileOperator, string>> = {
+    ...readOperatorsFromJsonEnv(),
+    ...readOperatorsFromDedicatedEnv(),
+  };
+
+  if (merged.orange && merged.mtn) return merged;
+
+  const fromApi = await fetchOperatorsFromApi();
+  return { ...fromApi, ...merged };
+}
+
+async function getOperatorIdMap(): Promise<Partial<Record<MobileOperator, string>>> {
+  if (operatorIdsCache?.orange && operatorIdsCache?.mtn) return operatorIdsCache;
+  if (!operatorIdsPromise) {
+    operatorIdsPromise = loadOperatorIds().then((map) => {
+      operatorIdsCache = map;
+      return map;
+    });
+  }
+  return operatorIdsPromise;
+}
+
+/** @deprecated Préférer resolveOperatorId (async) */
+export function getOperatorId(operator: MobileOperator): string {
+  const fromEnv = readOperatorsFromDedicatedEnv()[operator] ?? readOperatorsFromJsonEnv()[operator];
+  if (fromEnv) return fromEnv;
+  throw new Error(
+    `Opérateur ${operator} non configuré. Définissez EASYTRANSACT_OPERATOR_${operator === "orange" ? "ORANGE" : "MTN"} (ou EASYTRANSACT_OPERATORS) dans Vercel, ou vérifiez l’accès API aux opérateurs.`,
+  );
+}
+
+export async function resolveOperatorId(operator: MobileOperator): Promise<string> {
+  if (!process.env.EASYTRANSACT_API_TOKEN?.trim()) {
+    throw new Error(
+      "EASYTRANSACT_API_TOKEN manquant. Dashboard Easy Transact → Clés API → copiez sk_live_… dans Vercel (Environment Variables), puis redéployez.",
+    );
+  }
+
+  const map = await getOperatorIdMap();
+  const id = map[operator];
+  if (id) return id;
+
+  let hint = "";
+  try {
+    const available = await listPartnerOperators();
+    if (available.length) {
+      hint = ` Opérateurs API : ${available.map((o) => `${o.name ?? o.code ?? "?"}=${o.id}`).join(", ")}.`;
+    }
+  } catch {
+    /* ignore */
+  }
+
+  throw new Error(
+    `Opérateur ${operator} non configuré. Exécutez « npm run et:operators » (ou ajoutez EASYTRANSACT_OPERATOR_${operator === "orange" ? "ORANGE" : "MTN"} sur Vercel).${hint}`,
+  );
 }
 
 export function isEasyTransactConfigured(): boolean {
-  return Boolean(
-    process.env.EASYTRANSACT_API_URL &&
-      process.env.EASYTRANSACT_API_TOKEN &&
-      process.env.EASYTRANSACT_OPERATOR_ORANGE &&
-      process.env.EASYTRANSACT_OPERATOR_MTN,
-  );
+  return Boolean(process.env.EASYTRANSACT_API_URL && process.env.EASYTRANSACT_API_TOKEN);
 }
 
 function parseApiError(json: unknown, status: number, text: string): string {

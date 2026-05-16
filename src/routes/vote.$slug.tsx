@@ -127,8 +127,11 @@ function VotePage() {
           />
         </SoftField>
 
-        <SoftField label="Nombre de votes">
-          <VoteCounter value={voteCount} onChange={setVoteCount} />
+        <SoftField
+          label="Nombre de votes"
+          hint="Saisissez le nombre souhaité ou utilisez les raccourcis — le montant est calculé automatiquement"
+        >
+          <VoteCounter value={voteCount} onChange={setVoteCount} unitPrice={UNIT_PRICE} />
         </SoftField>
 
         <SoftField

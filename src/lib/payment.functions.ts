@@ -2,11 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { z } from "zod";
 import {
-  getOperatorId,
   getTransactionStatus,
   initiateDeposit,
   isEasyTransactConfigured,
   mapEasyTransactStatusToPayment,
+  resolveOperatorId,
 } from "@/lib/easytransact";
 import { createVoteIntentSchema, UNIT_PRICE } from "@/lib/payment.utils";
 import { applyPaymentStatus, mergeTransactionMetadata } from "@/lib/payment-status";
@@ -27,7 +27,7 @@ export const createVoteIntent = createServerFn({ method: "POST" })
     const description = `Vote ${data.vote_count}x pour ${candidate.name}`;
     const useDemo = !isEasyTransactConfigured() && process.env.DEMO_MODE === "true";
     const provider = useDemo ? "demo" : "easytransact";
-    const operator_id = useDemo ? `demo_${data.operator}` : getOperatorId(data.operator);
+    const operator_id = useDemo ? `demo_${data.operator}` : await resolveOperatorId(data.operator);
 
     const { data: tx, error } = await supabaseAdmin
       .from("vote_transactions")

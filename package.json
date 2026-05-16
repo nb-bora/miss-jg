@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "db:link": "npx supabase link --project-ref gazufurozikyvyaazmyv",
     "db:push": "npx supabase db push",
-    "db:seed:admin": "node scripts/seed-admin.mjs"
+    "db:seed:admin": "node scripts/seed-admin.mjs",
+    "et:operators": "node scripts/list-easytransact-operators.mjs"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",

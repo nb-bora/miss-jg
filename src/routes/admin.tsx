@@ -8,6 +8,7 @@ import {
   adminBootstrap,
   getAdminMe,
   getDashboard,
+  getEasyTransactSetup,
   listAllCandidates,
   listTransactions,
   setCandidateActive,
@@ -126,6 +127,7 @@ function AdminConsole() {
   const bootstrap = useServerFn(adminBootstrap);
   const me = useServerFn(getAdminMe);
   const dash = useServerFn(getDashboard);
+  const etSetup = useServerFn(getEasyTransactSetup);
   const txs = useServerFn(listTransactions);
   const cands = useServerFn(listAllCandidates);
   const toggle = useServerFn(setCandidateActive);
@@ -149,6 +151,11 @@ function AdminConsole() {
   const dashQ = useQuery({
     queryKey: ["admin-dash"],
     queryFn: () => dash(),
+    enabled: !!meQ.data?.isAdmin,
+  });
+  const etSetupQ = useQuery({
+    queryKey: ["admin-et-setup"],
+    queryFn: () => etSetup(),
     enabled: !!meQ.data?.isAdmin,
   });
   const txQ = useQuery({
@@ -249,7 +256,10 @@ function AdminConsole() {
 
         <div className="mt-8">
           {tab === "dashboard" && (
-            <DashboardView data={dashQ.data} loading={dashQ.isLoading} />
+            <div className="space-y-6">
+              <EasyTransactSetupPanel data={etSetupQ.data} loading={etSetupQ.isLoading} />
+              <DashboardView data={dashQ.data} loading={dashQ.isLoading} />
+            </div>
           )}
           {tab === "transactions" && (
             <TransactionsView
@@ -278,6 +288,66 @@ function AdminConsole() {
         </div>
       </div>
     </div>
+  );
+}
+
+type EtSetupData = {
+  tokenConfigured: boolean;
+  fromEnv: { orange: string | null; mtn: string | null };
+  operators: Array<{ id: string; name?: string; code?: string }>;
+  suggested?: { orange: string | null; mtn: string | null };
+  error?: string;
+};
+
+function EasyTransactSetupPanel({
+  data,
+  loading,
+}: {
+  data?: EtSetupData;
+  loading: boolean;
+}) {
+  if (loading) return null;
+  if (!data) return null;
+
+  const ready = Boolean(data.fromEnv.orange && data.fromEnv.mtn);
+  if (ready) return null;
+
+  return (
+    <SoftCard className="border-amber-500/40 bg-amber-950/20">
+      <p className="font-display text-sm font-bold text-amber-200">Paiements Easy Transact (production)</p>
+      {data.error ? (
+        <p className="mt-2 text-sm text-amber-100/90">{data.error}</p>
+      ) : null}
+      {!data.tokenConfigured ? (
+        <p className="mt-2 text-sm text-amber-100/90">
+          Ajoutez <code className="text-xs">EASYTRANSACT_API_TOKEN</code> (sk_live_…) dans Vercel, puis
+          redéployez.
+        </p>
+      ) : (
+        <>
+          <p className="mt-2 text-sm text-amber-100/90">
+            Copiez ces valeurs dans Vercel → Environment Variables :
+          </p>
+          <pre className="mt-3 overflow-x-auto rounded-lg bg-black/30 p-3 text-xs text-amber-50">
+            {data.suggested?.orange
+              ? `EASYTRANSACT_OPERATOR_ORANGE=${data.suggested.orange}\n`
+              : "# EASYTRANSACT_OPERATOR_ORANGE=\n"}
+            {data.suggested?.mtn
+              ? `EASYTRANSACT_OPERATOR_MTN=${data.suggested.mtn}`
+              : "# EASYTRANSACT_OPERATOR_MTN="}
+          </pre>
+          {data.operators.length > 0 ? (
+            <ul className="mt-3 space-y-1 text-xs text-amber-100/80">
+              {data.operators.map((o) => (
+                <li key={o.id}>
+                  {o.name ?? o.code ?? "Opérateur"} → <code>{o.id}</code>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </>
+      )}
+    </SoftCard>
   );
 }
 

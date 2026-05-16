@@ -17,14 +17,14 @@ export {
   parseCameroonMobilePhone,
 };
 
-export function operatorLabel(op: Operator) {
+export function operatorLabel(op: Operator | undefined) {
+  if (!op) return "Inconnu";
+
   switch (op) {
     case "orange":
       return "Orange Money";
     case "mtn":
       return "MTN Mobile Money";
-    default:
-      return op;
   }
 }
 export const phoneSchema = z
@@ -52,6 +52,6 @@ export const createVoteIntentSchema = z
       ...data,
       buyer_contact: parsed.national,
       buyer_msisdn: parsed.msisdn,
-      operator: parsed.operator,
+      operator: operatorSchema.parse(parsed.operator),
     };
   });

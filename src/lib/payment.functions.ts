@@ -34,7 +34,7 @@ export const createVoteIntent = createServerFn({ method: "POST" })
       .insert({
         candidate_id: candidate.id,
         package_id: null,
-        amount: totalAmount,
+        amount: subtotal,
         currency: "XAF",
         vote_count: data.vote_count,
         provider,
@@ -52,6 +52,7 @@ export const createVoteIntent = createServerFn({ method: "POST" })
           candidate_name: candidate.name,
           vote_subtotal: subtotal,
           transaction_fee: feeAmount,
+          total_charged: totalAmount,
         },
       })
       .select("id, provider_ref, amount, vote_count")
@@ -65,8 +66,8 @@ export const createVoteIntent = createServerFn({ method: "POST" })
       source: useDemo ? "demo" : "api",
       newStatus: "pending",
       payload: {
-        amount: totalAmount,
-        vote_subtotal: subtotal,
+        amount: subtotal,
+        total_charged: totalAmount,
         transaction_fee: feeAmount,
         vote_count: data.vote_count,
         operator: data.operator,
@@ -158,9 +159,15 @@ export const pollPaymentStatus = createServerFn({ method: "POST" })
 
     const meta = (tx.metadata ?? {}) as Record<string, unknown>;
     const voteSubtotal =
-      typeof meta.vote_subtotal === "number" ? meta.vote_subtotal : undefined;
+      typeof meta.vote_subtotal === "number" ? meta.vote_subtotal : tx.amount;
     const transactionFee =
       typeof meta.transaction_fee === "number" ? meta.transaction_fee : undefined;
+    const totalCharged =
+      typeof meta.total_charged === "number"
+        ? meta.total_charged
+        : transactionFee != null
+          ? voteSubtotal + transactionFee
+          : tx.amount;
 
     const base = {
       provider_ref: tx.provider_ref,
@@ -168,6 +175,7 @@ export const pollPaymentStatus = createServerFn({ method: "POST" })
       amount: tx.amount,
       vote_subtotal: voteSubtotal,
       transaction_fee: transactionFee,
+      total_charged: totalCharged,
       vote_count: tx.vote_count,
       candidate_name: candidate?.name ?? "",
       candidate_slug: candidate?.slug ?? "",

@@ -44,7 +44,7 @@ function SuccessPage() {
             <>
               <Row label="Montant des votes" value={formatXAF(data.vote_subtotal)} />
               <Row label="Frais (4 %)" value={formatXAF(data.transaction_fee)} />
-              <Row label="Total débité" value={formatXAF(data.amount)} />
+              <Row label="Total débité" value={formatXAF(data.total_charged)} />
             </>
           ) : (
             <Row label="Montant" value={formatXAF(data.amount)} />

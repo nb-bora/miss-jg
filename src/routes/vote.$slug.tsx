@@ -13,7 +13,7 @@ import {
   operatorLabel,
   type Operator,
 } from "@/lib/payment.utils";
-import { UNIT_PRICE } from "@/lib/payment.utils";
+import { computeVotePayment, UNIT_PRICE } from "@/lib/payment.utils";
 import { CandidateVoteHero } from "@/components/vote/candidate-vote-hero";
 import { VoteCounter } from "@/components/vote/vote-counter";
 import { OperatorToggle } from "@/components/vote/operator-toggle";
@@ -53,7 +53,7 @@ function VotePage() {
     if (detectedOperator) setOperator(detectedOperator);
   }, [detectedOperator]);
 
-  const totalAmount = voteCount * UNIT_PRICE;
+  const payment = useMemo(() => computeVotePayment(voteCount), [voteCount]);
 
   const mutation = useMutation({
     mutationFn: async () =>
@@ -149,13 +149,14 @@ function VotePage() {
           />
         </SoftField>
 
-        <PaymentSummary voteCount={voteCount} totalAmount={totalAmount} />
+        <PaymentSummary payment={payment} />
 
         <p className="rounded-xl border border-border/40 bg-background/40 p-4 text-xs leading-relaxed text-muted-foreground">
           En cliquant sur « Confirmer et payer », une demande de{" "}
-          <strong className="text-foreground">{formatXAF(totalAmount)}</strong> sera envoyée sur
-          votre téléphone. Vos <strong className="text-foreground">{voteCount}</strong> vote(s)
-          seront validés uniquement après confirmation du paiement.
+          <strong className="text-foreground">{formatXAF(payment.totalAmount)}</strong> (votes + frais
+          de transaction) sera envoyée sur votre téléphone. Vos{" "}
+          <strong className="text-foreground">{voteCount}</strong> vote(s) seront validés uniquement
+          après confirmation du paiement.
         </p>
 
         <button
@@ -169,7 +170,7 @@ function VotePage() {
               <Loader2 className="h-5 w-5 animate-spin" /> Envoi en cours…
             </>
           ) : (
-            <>Confirmer et payer {formatXAF(totalAmount)}</>
+            <>Confirmer et payer {formatXAF(payment.totalAmount)}</>
           )}
         </button>
 

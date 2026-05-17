@@ -1,10 +1,5 @@
 /**
- * Affiche les operator_id Easy Transact à copier dans Vercel / .env (production).
- *
- * Prérequis dans .env :
- *   EASYTRANSACT_API_URL=https://api.easy-transact.net
- *   EASYTRANSACT_API_TOKEN=sk_live_...
- *
+ * Affiche la config réseau Easy Transact (CASH_IN) — plus d’operator_id requis.
  * Usage : npm run et:operators
  */
 import fs from "fs";
@@ -27,125 +22,23 @@ function loadEnv() {
   }
 }
 
-function collectOperators(raw, out = []) {
-  if (Array.isArray(raw)) {
-    for (const item of raw) collectOperators(item, out);
-    return out;
-  }
-  if (typeof raw !== "object" || raw === null) return out;
-  const o = raw;
-  const id = o.id ?? o.operator_id ?? o.uuid ?? o.code ?? o.slug;
-  const name = o.name ?? o.label ?? o.operator_name;
-  const code = o.code;
-  const keys = Object.keys(o).join(" ").toLowerCase();
-  if (
-    id &&
-    typeof id === "string" &&
-    (keys.includes("operator") || ("name" in o || "code" in o || "label" in o))
-  ) {
-    out.push({ id: String(id).trim(), name: name ? String(name) : undefined, code: code ? String(code) : undefined });
-  }
-  for (const v of Object.values(o)) {
-    if (typeof v === "object" && v !== null) collectOperators(v, out);
-  }
-  return out;
-}
-
-function normalizeList(raw) {
-  const top = Array.isArray(raw)
-    ? raw
-    : raw?.results ?? raw?.data ?? raw?.operators ?? raw?.items ?? [];
-  const list = Array.isArray(top) && top.length ? top.map((item) => ({
-    id: String(item.id ?? item.operator_id ?? item.uuid ?? item.code ?? "").trim(),
-    name: item.name ?? item.label,
-    code: item.code,
-  })).filter((x) => x.id) : collectOperators(raw);
-  const seen = new Set();
-  return list.filter((x) => {
-    if (seen.has(x.id)) return false;
-    seen.add(x.id);
-    return true;
-  });
-}
-
-function matchOperator(list, operator) {
-  const needles =
-    operator === "orange"
-      ? ["orange", "orange money", "orm"]
-      : ["mtn", "momo", "mobile money"];
-  return list.find((item) => {
-    const hay = `${item.id} ${item.name ?? ""} ${item.code ?? ""}`.toLowerCase();
-    return needles.some((n) => hay.includes(n));
-  });
-}
-
 loadEnv();
 
-const base = (process.env.EASYTRANSACT_API_URL || "https://api.easy-transact.net").replace(/\/$/, "");
 const token = process.env.EASYTRANSACT_API_TOKEN?.trim();
+const service = process.env.EASYTRANSACT_SERVICE_CODE?.trim() || "CASH_IN";
+const country = process.env.EASYTRANSACT_COUNTRY_CODE?.trim() || "CM";
+const orange = process.env.EASYTRANSACT_NETWORK_ORANGE?.trim() || "ORANGE_CM";
+const mtn = process.env.EASYTRANSACT_NETWORK_MTN?.trim() || "MTN_CM";
 
-if (!token) {
-  console.error("❌ EASYTRANSACT_API_TOKEN est vide.");
-  console.error("   Dashboard Easy Transact → Clés API → copiez sk_live_… dans .env puis relancez.");
-  process.exit(1);
-}
+console.log("\n✅ Easy Transact — configuration CASH_IN (aucun operator_id requis)\n");
+console.log("Variables obligatoires :");
+console.log(`  EASYTRANSACT_API_URL=https://api.easy-transact.net`);
+console.log(`  EASYTRANSACT_API_TOKEN=${token ? "(défini)" : "← sk_live_… à ajouter"}`);
+console.log("\nRéseaux (automatiques dans l’app) :");
+console.log(`  Orange → network_code: ${orange}`);
+console.log(`  MTN    → network_code: ${mtn}`);
+console.log(`  service_code: ${service}`);
+console.log(`  country_code: ${country}`);
+console.log("\nOptionnel : EASYTRANSACT_RECEIVER_NUMBER (sinon = numéro du votant)\n");
 
-const paths = [
-  "/api/v1/partner/operators/",
-  "/api/v1/operators/",
-  "/api/v1/partner/operator/",
-  "/api/v1/partner/services/",
-];
-
-const merged = [];
-const seen = new Set();
-
-for (const p of paths) {
-  const res = await fetch(`${base}${p}`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-  });
-  const text = await res.text();
-  let json;
-  try {
-    json = text ? JSON.parse(text) : {};
-  } catch {
-    console.warn(`⚠ ${p} → réponse non JSON (${res.status})`);
-    continue;
-  }
-  if (!res.ok) {
-    console.warn(`⚠ ${p} → ${res.status} ${typeof json.detail === "string" ? json.detail : text.slice(0, 120)}`);
-    continue;
-  }
-  for (const item of normalizeList(json)) {
-    if (seen.has(item.id)) continue;
-    seen.add(item.id);
-    merged.push(item);
-  }
-}
-
-if (!merged.length) {
-  console.error("❌ Aucun opérateur trouvé via l’API.");
-  console.error("   Contactez le support Easy Transact (compte Miss JG) pour activer Orange / MTN sur DEPOSIT.");
-  process.exit(1);
-}
-
-console.log("\n✅ Opérateurs détectés :\n");
-for (const o of merged) {
-  console.log(`  • ${o.name ?? o.code ?? "Opérateur"} → id: ${o.id}`);
-}
-
-const orange = matchOperator(merged, "orange");
-const mtn = matchOperator(merged, "mtn");
-
-console.log("\n📋 Copiez dans Vercel (Environment Variables) :\n");
-if (orange) console.log(`EASYTRANSACT_OPERATOR_ORANGE=${orange.id}`);
-else console.log("# EASYTRANSACT_OPERATOR_ORANGE=  ← associez manuellement une ligne Orange ci-dessus");
-if (mtn) console.log(`EASYTRANSACT_OPERATOR_MTN=${mtn.id}`);
-else console.log("# EASYTRANSACT_OPERATOR_MTN=  ← associez manuellement une ligne MTN ci-dessus");
-
-if (orange && mtn) {
-  console.log(`\n# Ou en une ligne :`);
-  console.log(`EASYTRANSACT_OPERATORS={"orange":"${orange.id}","mtn":"${mtn.id}"}`);
-}
-
-console.log("\nPuis redéployez sur Vercel.\n");
+if (!token) process.exit(1);

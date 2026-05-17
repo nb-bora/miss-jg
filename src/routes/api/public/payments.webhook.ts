@@ -1,17 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createHmac, timingSafeEqual } from "crypto";
 import { applyPaymentStatus } from "@/lib/payment-status";
 import { mapEasyTransactStatusToPayment, mapWebhookEventToStatus } from "@/lib/easytransact";
 import { logPaymentEvent } from "@/lib/payment-audit";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-
-function verifySignature(body: string, secret: string, sig: string): boolean {
-  const expected = createHmac("sha256", secret).update(body).digest("hex");
-  const a = Buffer.from(sig);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
 
 function extractWebhookPayload(payload: Record<string, unknown>) {
   const data =
@@ -39,19 +30,6 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
     handlers: {
       POST: async ({ request }) => {
         const body = await request.text();
-        const secret = process.env.PAYMENT_WEBHOOK_SECRET;
-        const isProd = process.env.NODE_ENV === "production";
-
-        if (isProd && !secret) {
-          return new Response("Webhook secret not configured", { status: 503 });
-        }
-
-        if (secret) {
-          const sig = request.headers.get("x-webhook-signature") ?? "";
-          if (!verifySignature(body, secret, sig)) {
-            return new Response("Invalid signature", { status: 401 });
-          }
-        }
 
         let payload: Record<string, unknown>;
         try {

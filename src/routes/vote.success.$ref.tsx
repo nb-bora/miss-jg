@@ -40,7 +40,15 @@ function SuccessPage() {
 
         <dl className="mx-auto mt-8 max-w-sm space-y-2 rounded-2xl border border-border/60 bg-background/50 p-5 text-left text-sm">
           <Row label="Référence" value={ref} mono />
-          <Row label="Montant" value={formatXAF(data.amount)} />
+          {data.vote_subtotal != null && data.transaction_fee != null ? (
+            <>
+              <Row label="Montant des votes" value={formatXAF(data.vote_subtotal)} />
+              <Row label="Frais (4 %)" value={formatXAF(data.transaction_fee)} />
+              <Row label="Total débité" value={formatXAF(data.amount)} />
+            </>
+          ) : (
+            <Row label="Montant" value={formatXAF(data.amount)} />
+          )}
           <Row label="Votes ajoutés" value={String(data.vote_count)} />
           <Row label="Date" value={new Date().toLocaleString("fr-FR")} />
         </dl>

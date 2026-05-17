@@ -293,9 +293,12 @@ function AdminConsole() {
 
 type EtSetupData = {
   tokenConfigured: boolean;
-  fromEnv: { orange: string | null; mtn: string | null };
-  operators: Array<{ id: string; name?: string; code?: string }>;
-  suggested?: { orange: string | null; mtn: string | null };
+  config?: {
+    service_code: string;
+    country_code: string;
+    currency_code: string;
+    networks: { orange: string; mtn: string };
+  };
   error?: string;
 };
 
@@ -307,45 +310,19 @@ function EasyTransactSetupPanel({
   loading: boolean;
 }) {
   if (loading) return null;
-  if (!data) return null;
-
-  const ready = Boolean(data.fromEnv.orange && data.fromEnv.mtn);
-  if (ready) return null;
+  if (!data || data.tokenConfigured) return null;
 
   return (
     <SoftCard className="border-amber-500/40 bg-amber-950/20">
-      <p className="font-display text-sm font-bold text-amber-200">Paiements Easy Transact (production)</p>
+      <p className="font-display text-sm font-bold text-amber-200">Paiements Easy Transact</p>
       {data.error ? (
         <p className="mt-2 text-sm text-amber-100/90">{data.error}</p>
-      ) : null}
-      {!data.tokenConfigured ? (
-        <p className="mt-2 text-sm text-amber-100/90">
-          Ajoutez <code className="text-xs">EASYTRANSACT_API_TOKEN</code> (sk_live_…) dans Vercel, puis
-          redéployez.
-        </p>
       ) : (
-        <>
-          <p className="mt-2 text-sm text-amber-100/90">
-            Copiez ces valeurs dans Vercel → Environment Variables :
-          </p>
-          <pre className="mt-3 overflow-x-auto rounded-lg bg-black/30 p-3 text-xs text-amber-50">
-            {data.suggested?.orange
-              ? `EASYTRANSACT_OPERATOR_ORANGE=${data.suggested.orange}\n`
-              : "# EASYTRANSACT_OPERATOR_ORANGE=\n"}
-            {data.suggested?.mtn
-              ? `EASYTRANSACT_OPERATOR_MTN=${data.suggested.mtn}`
-              : "# EASYTRANSACT_OPERATOR_MTN="}
-          </pre>
-          {data.operators.length > 0 ? (
-            <ul className="mt-3 space-y-1 text-xs text-amber-100/80">
-              {data.operators.map((o) => (
-                <li key={o.id}>
-                  {o.name ?? o.code ?? "Opérateur"} → <code>{o.id}</code>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </>
+        <p className="mt-2 text-sm text-amber-100/90">
+          Ajoutez <code className="text-xs">EASYTRANSACT_API_TOKEN</code> (clé API sk_live_…) dans Vercel.
+          Les réseaux <code className="text-xs">ORANGE_CM</code> / <code className="text-xs">MTN_CM</code> sont
+          appliqués automatiquement — pas besoin de EASYTRANSACT_OPERATOR_*.
+        </p>
       )}
     </SoftCard>
   );

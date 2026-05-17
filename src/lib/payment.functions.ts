@@ -2,13 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { z } from "zod";
 import {
+  getNetworkCode,
   getTransactionStatus,
   initiateDeposit,
   isEasyTransactConfigured,
   mapEasyTransactStatusToPayment,
-  resolveOperatorId,
 } from "@/lib/easytransact";
-import { createVoteIntentSchema, UNIT_PRICE } from "@/lib/payment.utils";
+import { computeVotePayment, createVoteIntentSchema } from "@/lib/payment.utils";
 import { applyPaymentStatus, mergeTransactionMetadata } from "@/lib/payment-status";
 import { logPaymentEvent } from "@/lib/payment-audit";
 
@@ -22,19 +22,19 @@ export const createVoteIntent = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!candidate || !candidate.is_active) throw new Error("Candidat introuvable");
 
-    const amount = data.vote_count * UNIT_PRICE;
+    const { subtotal, feeAmount, totalAmount } = computeVotePayment(data.vote_count);
     const provider_ref = `mv_${crypto.randomUUID()}`;
     const description = `Vote ${data.vote_count}x pour ${candidate.name}`;
     const useDemo = !isEasyTransactConfigured() && process.env.DEMO_MODE === "true";
     const provider = useDemo ? "demo" : "easytransact";
-    const operator_id = useDemo ? `demo_${data.operator}` : await resolveOperatorId(data.operator);
+    const network_code = useDemo ? `demo_${data.operator}` : getNetworkCode(data.operator);
 
     const { data: tx, error } = await supabaseAdmin
       .from("vote_transactions")
       .insert({
         candidate_id: candidate.id,
         package_id: null,
-        amount,
+        amount: totalAmount,
         currency: "XAF",
         vote_count: data.vote_count,
         provider,
@@ -45,11 +45,13 @@ export const createVoteIntent = createServerFn({ method: "POST" })
         operator: data.operator,
         metadata: {
           operator: data.operator,
-          operator_id,
+          network_code,
           buyer_msisdn: data.buyer_msisdn,
           initiated_at: new Date().toISOString(),
           candidate_slug: data.candidate_slug,
           candidate_name: candidate.name,
+          vote_subtotal: subtotal,
+          transaction_fee: feeAmount,
         },
       })
       .select("id, provider_ref, amount, vote_count")
@@ -63,7 +65,9 @@ export const createVoteIntent = createServerFn({ method: "POST" })
       source: useDemo ? "demo" : "api",
       newStatus: "pending",
       payload: {
-        amount,
+        amount: totalAmount,
+        vote_subtotal: subtotal,
+        transaction_fee: feeAmount,
         vote_count: data.vote_count,
         operator: data.operator,
         buyer_contact: data.buyer_contact,
@@ -92,10 +96,10 @@ export const createVoteIntent = createServerFn({ method: "POST" })
     try {
       etResponse = await initiateDeposit({
         vendor_reference: provider_ref,
-        amount,
+        amount: totalAmount,
         description,
         sender_number: data.buyer_msisdn,
-        operator_id,
+        network_code,
       });
       await logPaymentEvent({
         transactionId: tx.id,
@@ -152,10 +156,18 @@ export const pollPaymentStatus = createServerFn({ method: "POST" })
       .eq("id", tx.candidate_id)
       .maybeSingle();
 
+    const meta = (tx.metadata ?? {}) as Record<string, unknown>;
+    const voteSubtotal =
+      typeof meta.vote_subtotal === "number" ? meta.vote_subtotal : undefined;
+    const transactionFee =
+      typeof meta.transaction_fee === "number" ? meta.transaction_fee : undefined;
+
     const base = {
       provider_ref: tx.provider_ref,
       payment_status: tx.payment_status,
       amount: tx.amount,
+      vote_subtotal: voteSubtotal,
+      transaction_fee: transactionFee,
       vote_count: tx.vote_count,
       candidate_name: candidate?.name ?? "",
       candidate_slug: candidate?.slug ?? "",

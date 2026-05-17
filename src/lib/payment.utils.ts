@@ -6,6 +6,22 @@ import {
 } from "@/lib/cameroon-phone";
 
 export const UNIT_PRICE = 100;
+/** Frais de transaction : 4 % du montant des votes */
+export const TRANSACTION_FEE_RATE = 0.04;
+
+export type VotePaymentBreakdown = {
+  voteCount: number;
+  subtotal: number;
+  feeAmount: number;
+  totalAmount: number;
+};
+
+export function computeVotePayment(voteCount: number): VotePaymentBreakdown {
+  const subtotal = voteCount * UNIT_PRICE;
+  const feeAmount = Math.round(subtotal * TRANSACTION_FEE_RATE);
+  const totalAmount = subtotal + feeAmount;
+  return { voteCount, subtotal, feeAmount, totalAmount };
+}
 
 export const operatorSchema = z.enum(["orange", "mtn"]);
 export type Operator = z.infer<typeof operatorSchema>;

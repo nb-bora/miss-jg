@@ -69,7 +69,15 @@ function AttentePage() {
         {data && (
           <dl className="mx-auto mt-6 max-w-xs space-y-2 rounded-xl border border-border/60 bg-background/50 p-4 text-left text-sm">
             <Row label="Référence" value={ref} mono />
-            <Row label="Montant" value={formatXAF(data.amount)} />
+            {data.vote_subtotal != null && data.transaction_fee != null ? (
+              <>
+                <Row label="Montant des votes" value={formatXAF(data.vote_subtotal)} />
+                <Row label="Frais (4 %)" value={formatXAF(data.transaction_fee)} />
+                <Row label="Total prélevé" value={formatXAF(data.amount)} />
+              </>
+            ) : (
+              <Row label="Montant" value={formatXAF(data.amount)} />
+            )}
             <Row label="Votes" value={String(data.vote_count)} />
             {data.operator && <Row label="Opérateur" value={data.operator.toUpperCase()} />}
           </dl>

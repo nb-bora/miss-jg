@@ -79,6 +79,7 @@ export function VoteCounter({
       <p className="mt-3 text-center text-sm text-muted-foreground">
         {value} vote{value > 1 ? "s" : ""} × {formatXAF(unitPrice)} ={" "}
         <strong className="text-rose">{formatXAF(totalAmount)}</strong>
+        <span className="block text-xs">hors frais de transaction (4 %)</span>
       </p>
       <div className="mt-4 flex flex-wrap justify-center gap-2">
         {QUICK_VOTES.map((q) => (

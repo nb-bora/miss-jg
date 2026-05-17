@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { ensureDefaultAdmin } from "@/lib/admin-seed";
-import { isEasyTransactConfigured, listPartnerOperators } from "@/lib/easytransact";
+import { getEasyTransactPaymentConfig, isEasyTransactConfigured } from "@/lib/easytransact";
 import { z } from "zod";
 
 const txFiltersSchema = z.object({
@@ -56,48 +56,24 @@ export const getAdminMe = createServerFn({ method: "GET" })
     return { isAdmin: !!data, userId: context.userId };
   });
 
-/** Diagnostic prod : operator_id Easy Transact à copier dans Vercel */
+/** Diagnostic prod : config Easy Transact (CASH_IN + network_code) */
 export const getEasyTransactSetup = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.userId);
 
-    const fromEnv = {
-      orange: process.env.EASYTRANSACT_OPERATOR_ORANGE?.trim() || null,
-      mtn: process.env.EASYTRANSACT_OPERATOR_MTN?.trim() || null,
-    };
     const tokenConfigured = Boolean(process.env.EASYTRANSACT_API_TOKEN?.trim());
+    const config = getEasyTransactPaymentConfig();
 
     if (!isEasyTransactConfigured()) {
       return {
         tokenConfigured,
-        fromEnv,
-        operators: [] as Array<{ id: string; name?: string; code?: string }>,
+        config,
         error: "EASYTRANSACT_API_TOKEN manquant sur le serveur (Vercel → Environment Variables).",
       };
     }
 
-    try {
-      const operators = await listPartnerOperators();
-      const hay = (o: { id: string; name?: string; code?: string }) =>
-        `${o.id} ${o.name ?? ""} ${o.code ?? ""}`.toLowerCase();
-      const suggestedOrange =
-        operators.find((o) => /orange|orm/.test(hay(o)))?.id ?? null;
-      const suggestedMtn = operators.find((o) => /mtn|momo/.test(hay(o)))?.id ?? null;
-      return {
-        tokenConfigured,
-        fromEnv,
-        operators,
-        suggested: { orange: suggestedOrange, mtn: suggestedMtn },
-      };
-    } catch (e) {
-      return {
-        tokenConfigured,
-        fromEnv,
-        operators: [] as Array<{ id: string; name?: string; code?: string }>,
-        error: e instanceof Error ? e.message : "Impossible de lister les opérateurs",
-      };
-    }
+    return { tokenConfigured, config };
   });
 
 export const getDashboard = createServerFn({ method: "GET" })

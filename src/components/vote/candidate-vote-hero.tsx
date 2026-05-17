@@ -15,7 +15,7 @@ export function CandidateVoteHero({
   const label = category === "miss" ? "Candidate Miss" : "Candidat Master";
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-card/80 p-4">
+    <div className="rounded-2xl border border-border/60 bg-card/80 p-4 o">
       <div className="flex items-center gap-4">
         {photoUrl ? (
           <img src={photoUrl} alt={name} className="h-16 w-16 rounded-full object-cover ring-2 ring-rose/30" />

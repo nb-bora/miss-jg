@@ -20,9 +20,6 @@ export default defineConfig(async () => {
     cloudflare: !isVercel,
     tanstackStart: {
       ...(isVercel ? {} : { server: { entry: "server" } }),
-      serverFns: {
-        disableCsrfMiddlewareWarning: true,
-      },
     },
     plugins,
   };

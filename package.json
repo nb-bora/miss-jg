@@ -13,6 +13,7 @@
     "db:link": "npx supabase link --project-ref gazufurozikyvyaazmyv",
     "db:push": "npx supabase db push",
     "db:seed:admin": "node scripts/seed-admin.mjs",
+    "db:clear:votes": "node scripts/clear-vote-data.mjs",
     "et:operators": "node scripts/list-easytransact-operators.mjs"
   },
   "dependencies": {

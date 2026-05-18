@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as MaintenanceRouteImport } from './routes/maintenance'
 import { Route as ClassementRouteImport } from './routes/classement'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -19,6 +20,11 @@ import { Route as VoteEchecRefRouteImport } from './routes/vote.echec.$ref'
 import { Route as VoteAttenteRefRouteImport } from './routes/vote.attente.$ref'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments.webhook'
 
+const MaintenanceRoute = MaintenanceRouteImport.update({
+  id: '/maintenance',
+  path: '/maintenance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClassementRoute = ClassementRouteImport.update({
   id: '/classement',
   path: '/classement',
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/classement': typeof ClassementRoute
+  '/maintenance': typeof MaintenanceRoute
   '/c/$slug': typeof CSlugRoute
   '/vote/$slug': typeof VoteSlugRoute
   '/vote/attente/$ref': typeof VoteAttenteRefRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/classement': typeof ClassementRoute
+  '/maintenance': typeof MaintenanceRoute
   '/c/$slug': typeof CSlugRoute
   '/vote/$slug': typeof VoteSlugRoute
   '/vote/attente/$ref': typeof VoteAttenteRefRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/classement': typeof ClassementRoute
+  '/maintenance': typeof MaintenanceRoute
   '/c/$slug': typeof CSlugRoute
   '/vote/$slug': typeof VoteSlugRoute
   '/vote/attente/$ref': typeof VoteAttenteRefRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/classement'
+    | '/maintenance'
     | '/c/$slug'
     | '/vote/$slug'
     | '/vote/attente/$ref'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/classement'
+    | '/maintenance'
     | '/c/$slug'
     | '/vote/$slug'
     | '/vote/attente/$ref'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/classement'
+    | '/maintenance'
     | '/c/$slug'
     | '/vote/$slug'
     | '/vote/attente/$ref'
@@ -140,6 +152,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   ClassementRoute: typeof ClassementRoute
+  MaintenanceRoute: typeof MaintenanceRoute
   CSlugRoute: typeof CSlugRoute
   VoteSlugRoute: typeof VoteSlugRoute
   VoteAttenteRefRoute: typeof VoteAttenteRefRoute
@@ -150,6 +163,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/maintenance': {
+      id: '/maintenance'
+      path: '/maintenance'
+      fullPath: '/maintenance'
+      preLoaderRoute: typeof MaintenanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/classement': {
       id: '/classement'
       path: '/classement'
@@ -220,6 +240,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   ClassementRoute: ClassementRoute,
+  MaintenanceRoute: MaintenanceRoute,
   CSlugRoute: CSlugRoute,
   VoteSlugRoute: VoteSlugRoute,
   VoteAttenteRefRoute: VoteAttenteRefRoute,

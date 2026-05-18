@@ -7,7 +7,9 @@ import {
   HeadContent,
   Scripts,
   Link,
+  redirect,
 } from "@tanstack/react-router";
+import { isMaintenanceExemptPath, isMaintenanceMode } from "@/lib/maintenance";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import appCss from "../styles.css?url";
@@ -54,6 +56,11 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  beforeLoad: ({ location }) => {
+    if (isMaintenanceMode() && !isMaintenanceExemptPath(location.pathname)) {
+      throw redirect({ to: "/maintenance" });
+    }
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },

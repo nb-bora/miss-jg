@@ -16,11 +16,19 @@ export default defineConfig(async () => {
     plugins.push(nitro());
   }
 
+  const maintenanceFlag =
+    process.env.VITE_MAINTENANCE_MODE ?? process.env.MAINTENANCE_MODE ?? "false";
+
   return {
     cloudflare: !isVercel,
     tanstackStart: {
       ...(isVercel ? {} : { server: { entry: "server" } }),
     },
     plugins,
+    vite: {
+      define: {
+        "import.meta.env.VITE_MAINTENANCE_MODE": JSON.stringify(maintenanceFlag),
+      },
+    },
   };
 });

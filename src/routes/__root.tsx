@@ -15,6 +15,15 @@ import { supabase } from "@/integrations/supabase/client";
 import appCss from "../styles.css?url";
 
 function NotFound() {
+  const router = useRouter();
+  useEffect(() => {
+    if (isMaintenanceMode()) {
+      void router.navigate({ to: "/maintenance", replace: true });
+    }
+  }, [router]);
+
+  if (isMaintenanceMode()) return null;
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">

@@ -10,12 +10,8 @@ export function createMaintenanceMiddleware() {
     const handlerType = (ctx as { handlerType?: string }).handlerType;
     if (handlerType !== "router") return ctx.next();
 
-    const url = new URL(ctx.request.url);
-    if (!isMaintenanceMode() || isMaintenanceExemptPath(url.pathname)) {
-      return ctx.next();
-    }
-
-    const target = new URL("/maintenance", url.origin);
-    return Response.redirect(target.toString(), 307);
+    // Maintenance désactivée par code (choix B)
+    return ctx.next();
   });
 }
+

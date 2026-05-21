@@ -1,9 +1,5 @@
 import type { Operator } from "@/lib/payment.utils";
 
-/**
- * Plan de numérotage national Cameroun (ART) — mobile à 9 chiffres, S = 6.
- * @see https://www.itu.int — communications ART Cameroun
- */
 export function normalizeCameroonPhone(raw: string): string {
   let digits = raw.replace(/\D/g, "");
 
@@ -13,7 +9,7 @@ export function normalizeCameroonPhone(raw: string): string {
     digits = digits.slice(3);
   }
 
-  // Ancien format 8 chiffres (pré-2014) : 7XXXXXXX → 67XXXXXXX, 9XXXXXXX → 69XXXXXXX
+  // ancien format 8 chiffres
   if (digits.length === 8 && /^[79]/.test(digits)) {
     digits = `6${digits}`;
   }
@@ -21,17 +17,40 @@ export function normalizeCameroonPhone(raw: string): string {
   return digits;
 }
 
-/** MTN : 67x, 650–654. Orange : 69x, 655–659. Nexttel (66) : non pris en charge ici. */
+/**
+ * Check si prefix 3 digits est dans un range
+ */
+function inRange(prefix: string, start: number, end: number): boolean {
+  const p = parseInt(prefix, 10);
+  return p >= start && p <= end;
+}
+
 export function detectCameroonMobileOperator(national: string): Operator | null {
   if (!/^6\d{8}$/.test(national)) return null;
 
-  const prefix3 = national.slice(0, 3);
+  const p2 = national.slice(0, 2); // ex: 67
+  const p3 = national.slice(0, 3); // ex: 650
 
-  if (national.startsWith("67")) return "mtn";
-  if (prefix3 >= "650" && prefix3 <= "654") return "mtn";
+  const p3num = parseInt(p3, 10);
 
-  if (national.startsWith("69")) return "orange";
-  if (prefix3 >= "655" && prefix3 <= "659") return "orange";
+  // MTN
+  if (
+    p2 === "67" ||
+    inRange(p3, 650, 654) ||
+    inRange(p3, 670, 684)
+  ) {
+    return "mtn";
+  }
+
+  // Orange
+  if (
+    p2 === "69" ||
+    inRange(p3, 640, 649) ||
+    inRange(p3, 655, 659) ||
+    inRange(p3, 685, 699)
+  ) {
+    return "orange";
+  }
 
   return null;
 }
@@ -45,14 +64,15 @@ export function parseCameroonMobilePhone(raw: string): {
 
   if (!/^6\d{8}$/.test(national)) {
     throw new Error(
-      "Numéro Mobile Money invalide. Utilisez 9 chiffres commençant par 6 (ex. 677123456 ou +237 6 77 12 34 56).",
+      "Numéro Mobile Money invalide. Utilisez 9 chiffres commençant par 6 (ex: 677123456 ou +237 6 77 12 34 56)."
     );
   }
 
   const operator = detectCameroonMobileOperator(national);
+
   if (!operator) {
     throw new Error(
-      "Ce numéro n'est pas reconnu comme Orange Money (69, 655–659) ou MTN MoMo (67, 650–654).",
+      "Numéro non reconnu MTN ou Orange selon les plages camerounaises."
     );
   }
 

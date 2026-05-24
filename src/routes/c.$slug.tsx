@@ -136,13 +136,7 @@ function CandidatePage() {
             )}
 
             {/* CTA */}
-            <Link
-              to="/vote/$slug"
-              params={{ slug: c.slug }}
-              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-rose px-8 py-4 font-display text-lg font-bold text-white shadow-rose-glow transition hover:opacity-95 sm:w-auto"
-            >
-              <TrendingUp className="h-5 w-5" /> Choisir cette candidate
-            </Link>
+            
 
             {/* Share */}
             <div className="mt-5">

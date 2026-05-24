@@ -159,21 +159,6 @@ function VotePage() {
           après confirmation du paiement.
         </p>
 
-        <button
-          type="button"
-          disabled={mutation.isPending || !canSubmit}
-          onClick={() => mutation.mutate()}
-          className="btn-rose-lg w-full"
-        >
-          {mutation.isPending ? (
-            <>
-              <Loader2 className="h-5 w-5 animate-spin" /> Envoi en cours…
-            </>
-          ) : (
-            <>Confirmer et payer {formatXAF(payment.totalAmount)}</>
-          )}
-        </button>
-
         <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5 text-rose" />
           Paiement sécurisé · Easy Transact
